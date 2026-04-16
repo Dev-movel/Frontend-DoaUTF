@@ -8,6 +8,8 @@ class EditorialInput extends StatelessWidget {
   final TextInputType keyboardType;
   final bool obscure;
   final Widget? suffixIcon;
+  final TextEditingController? controller;
+  final String? Function(String?)? validator;
 
   const EditorialInput({
     super.key,
@@ -16,11 +18,15 @@ class EditorialInput extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.obscure = false,
     this.suffixIcon,
+    this.controller,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      controller: controller,
+      validator: validator,
       keyboardType: keyboardType,
       obscureText: obscure,
       style: AppTextStyles.input,
@@ -47,6 +53,14 @@ class EditorialInput extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: 0.4),
             width: 2,
           ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 2),
         ),
       ),
     );

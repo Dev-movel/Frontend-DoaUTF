@@ -4,6 +4,7 @@ import '../theme/app_text_styles.dart';
 import '../widgets/editorial_input.dart';
 import '../widgets/date_picker_field.dart';
 import '../widgets/gradient_button.dart';
+import '../services/auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -14,8 +15,63 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+
+  final _nomeController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _senhaController = TextEditingController();
+  final _confirmacaoController = TextEditingController();
+  final _dataController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _loading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _nomeController.dispose();
+    _emailController.dispose();
+    _senhaController.dispose();
+    _confirmacaoController.dispose();
+    _dataController.dispose();
+    super.dispose();
+  }
+
+  /// Converte dd/mm/yyyy para yyyy-MM-dd (formato esperado pelo back)
+  String? _toIsoDate(String ddmmyyyy) {
+    if (ddmmyyyy.length != 10) return null;
+    final parts = ddmmyyyy.split('/');
+    return '${parts[2]}-${parts[1]}-${parts[0]}';
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await AuthService.register(
+        nome: _nomeController.text.trim(),
+        email: _emailController.text.trim(),
+        senha: _senhaController.text,
+        dataNascimento: _toIsoDate(_dataController.text),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Conta criada com sucesso!')),
+      );
+    } on Exception catch (e) {
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,137 +161,184 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Widget _buildForm() {
-    return SingleChildScrollView(        
-    child: Padding(
-      padding: const EdgeInsets.all(36),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Crie sua conta', style: AppTextStyles.headline),
-            const SizedBox(height: 4),
-            Text(
-              'Inicie sua jornada no arquivo da sustentabilidade.',
-              style: AppTextStyles.subtitle,
-            ),
-            const SizedBox(height: 32),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(36),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Crie sua conta', style: AppTextStyles.headline),
+              const SizedBox(height: 4),
+              Text(
+                'Inicie sua jornada no arquivo da sustentabilidade.',
+                style: AppTextStyles.subtitle,
+              ),
+              const SizedBox(height: 32),
 
-            const _FieldLabel('NOME COMPLETO'),
-            const SizedBox(height: 6),
-            const EditorialInput(
-              hint: 'Ex: Maria Silva',
-              icon: Icons.person_outline_rounded,
-              keyboardType: TextInputType.name,
-            ),
-            const SizedBox(height: 20),
+              const _FieldLabel('NOME COMPLETO'),
+              const SizedBox(height: 6),
+              EditorialInput(
+                hint: 'Ex: Maria Silva',
+                icon: Icons.person_outline_rounded,
+                keyboardType: TextInputType.name,
+                controller: _nomeController,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Informe seu nome.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
 
-            const _FieldLabel('DATA DE NASCIMENTO'),
-            const SizedBox(height: 6),
-            const DatePickerField(),
-            const SizedBox(height: 20),
+              const _FieldLabel('DATA DE NASCIMENTO'),
+              const SizedBox(height: 6),
+              DatePickerField(
+                controller: _dataController,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty && value.length != 10) {
+                    return 'Data incompleta.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
 
-            const _FieldLabel('E-MAIL INSTITUCIONAL'),
-            const SizedBox(height: 6),
-            const EditorialInput(
-              hint: 'usuario@instituicao.edu.br',
-              icon: Icons.school_outlined,
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 20),
+              const _FieldLabel('E-MAIL INSTITUCIONAL'),
+              const SizedBox(height: 6),
+              EditorialInput(
+                hint: 'usuario@alunos.utfpr.edu.br',
+                icon: Icons.school_outlined,
+                keyboardType: TextInputType.emailAddress,
+                controller: _emailController,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Informe seu e-mail.';
+                  }
+                  if (!value.trim().endsWith('@alunos.utfpr.edu.br')) {
+                    return 'Use seu e-mail @alunos.utfpr.edu.br.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
 
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _FieldLabel('SENHA'),
-                      const SizedBox(height: 6),
-                      EditorialInput(
-                        hint: '••••••••',
-                        icon: Icons.lock_outline_rounded,
-                        obscure: _obscurePassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            size: 18,
-                            color: AppColors.outline,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _FieldLabel('SENHA'),
+                        const SizedBox(height: 6),
+                        EditorialInput(
+                          hint: '••••••••',
+                          icon: Icons.lock_outline_rounded,
+                          obscure: _obscurePassword,
+                          controller: _senhaController,
+                          validator: (value) {
+                            if (value == null || value.length < 6) {
+                              return 'Mínimo 6 caracteres.';
+                            }
+                            return null;
+                          },
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 18,
+                              color: AppColors.outline,
+                            ),
+                            onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword),
                           ),
-                          onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _FieldLabel('CONFIRMAÇÃO'),
+                        const SizedBox(height: 6),
+                        EditorialInput(
+                          hint: '••••••••',
+                          icon: Icons.verified_user_outlined,
+                          obscure: _obscureConfirm,
+                          controller: _confirmacaoController,
+                          validator: (value) {
+                            if (value != _senhaController.text) {
+                              return 'Senhas não coincidem.';
+                            }
+                            return null;
+                          },
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirm
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 18,
+                              color: AppColors.outline,
+                            ),
+                            onPressed: () => setState(
+                                () => _obscureConfirm = !_obscureConfirm),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Mensagem de erro da API
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+
+              const SizedBox(height: 20),
+
+              GradientButton(
+                label: _loading ? 'Aguarde...' : 'Criar Conta',
+                onPressed: _loading ? () {} : _submit,
+              ),
+              const SizedBox(height: 16),
+
+              Center(
+                child: RichText(
+                  text: TextSpan(
+                    style: AppTextStyles.body,
+                    text: 'Já possui uma conta? ',
                     children: [
-                      const _FieldLabel('CONFIRMAÇÃO'),
-                      const SizedBox(height: 6),
-                      EditorialInput(
-                        hint: '••••••••',
-                        icon: Icons.verified_user_outlined,
-                        obscure: _obscureConfirm,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirm
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            size: 18,
-                            color: AppColors.outline,
-                          ),
-                          onPressed: () => setState(
-                              () => _obscureConfirm = !_obscureConfirm),
-                        ),
-                      ),
+                      TextSpan(text: 'Entrar', style: AppTextStyles.link),
                     ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            GradientButton(
-              label: 'Criar Conta',
-              onPressed: () {
-                if (_formKey.currentState?.validate() ?? false) {
-                  // handle submit
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-
-            Center(
-              child: RichText(
-                text: TextSpan(
-                  style: AppTextStyles.body,
-                  text: 'Já possui uma conta? ',
-                  children: [
-                    TextSpan(text: 'Entrar', style: AppTextStyles.link),
-                  ],
                 ),
               ),
-            ),
-            const SizedBox(height: 28),
+              const SizedBox(height: 28),
 
-            Container(
-              height: 1,
-              color: AppColors.outlineVariant.withValues(alpha: 0.2),
-            ),
-            const SizedBox(height: 16),
+              Container(
+                height: 1,
+                color: AppColors.outlineVariant.withValues(alpha: 0.2),
+              ),
+              const SizedBox(height: 16),
 
-            Center(
-              child: Text(
-                'Ao se inscrever, você concorda com nossos Termos de Serviço e Relatório de Sustentabilidade.',
-                style: AppTextStyles.legal,
-                textAlign: TextAlign.center,
+              Center(
+                child: Text(
+                  'Ao se inscrever, você concorda com nossos Termos de Serviço e Relatório de Sustentabilidade.',
+                  style: AppTextStyles.legal,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],

@@ -4,13 +4,18 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
 class DatePickerField extends StatelessWidget {
-  const DatePickerField({super.key});
+  final TextEditingController? controller;
+  final String? Function(String?)? validator;
+
+  const DatePickerField({super.key, this.controller, this.validator});
 
   static final _dateFormatter = _DateInputFormatter();
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      controller: controller,
+      validator: validator,
       keyboardType: TextInputType.number,
       style: AppTextStyles.input,
       inputFormatters: [
@@ -40,6 +45,14 @@ class DatePickerField extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: 0.4),
             width: 2,
           ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 2),
         ),
       ),
     );
