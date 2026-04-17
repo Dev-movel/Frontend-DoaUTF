@@ -35,22 +35,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      debugPrint('📧 Enviando recuperação para: $email');
+      debugPrint('Enviando recuperação para: $email');
       await AuthService.instance.forgotPassword(email: email);
 
       if (!mounted) return;
-      debugPrint('✅ E-mail de recuperação enviado com sucesso!');
+      debugPrint('E-mail de recuperação enviado com sucesso!');
       setState(() => _emailSent = true);
       _showSnackbar('E-mail de recuperação enviado!', isError: false);
     } on DioException catch (e) {
-      debugPrint('❌ DioException: ${e.message}');
-      debugPrint('📊 Status: ${e.response?.statusCode}');
-      debugPrint('📦 Response: ${e.response?.data}');
+      debugPrint('DioException: ${e.message}');
+      debugPrint('Status: ${e.response?.statusCode}');
+      debugPrint('Response: ${e.response?.data}');
       if (mounted) {
         _showSnackbar(_friendlyError(e), isError: true);
       }
     } catch (e) {
-      debugPrint('❌ Erro geral: $e');
+      debugPrint('Erro geral: $e');
       if (mounted) {
         _showSnackbar('Erro inesperado. Tente novamente.', isError: true);
       }

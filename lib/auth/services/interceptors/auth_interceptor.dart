@@ -4,7 +4,6 @@ import '../auth_service.dart';
 import '../token_storage.dart';
 
 class AuthInterceptor extends Interceptor {
-  /// [navigatorKey] é necessário para navegar sem contexto.
   final GlobalKey<NavigatorState> navigatorKey;
 
   bool _isRefreshing = false;
