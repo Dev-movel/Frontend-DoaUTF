@@ -37,7 +37,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  /// Converte dd/mm/yyyy para yyyy-MM-dd (formato esperado pelo back)
+  /// Converte dd/mm/yyyy para yyyy-MM-dd
   String? _toIsoDate(String ddmmyyyy) {
     if (ddmmyyyy.length != 10) return null;
     final parts = ddmmyyyy.split('/');
@@ -59,17 +59,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
         return;
       }
 
-      await AuthService.instance.register(
-        nome: _nomeController.text.trim(),
-        email: _emailController.text.trim(),
-        senha: _senhaController.text,
-        dataNascimento: isoDate,
+      final requireVerification = await AuthService.instance.register(
+        nome:            _nomeController.text.trim(),
+        email:           _emailController.text.trim(),
+        senha:           _senhaController.text,
+        dataNascimento:  isoDate,
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Conta criada com sucesso!')),
-      );
+
+      if (requireVerification) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/verify-email',
+          arguments: _emailController.text.trim(),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Conta criada com sucesso!')),
+        );
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } on Exception catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -303,7 +313,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Mensagem de erro da API
               if (_errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),

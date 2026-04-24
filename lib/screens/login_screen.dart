@@ -18,6 +18,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
+  bool _showVerifyEmailButton = false;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -49,40 +51,56 @@ class _LoginScreenState extends State<LoginScreen> {
     } on DioException catch (e) {
       debugPrint('DioException: ${e.message}');
       debugPrint('Status: ${e.response?.statusCode}');
-      debugPrint('Response: ${e.response?.data}');
-      if (mounted) {
+      if (e.response?.statusCode == 403) {
+        _showError('Você precisa verificar seu e-mail antes de entrar.');
+        setState(() => _showVerifyEmailButton = true);
+      } else {
         _showError(_friendlyError(e));
       }
     } catch (e) {
       debugPrint('Erro geral: $e');
-      if (mounted) {
-        _showError('Erro inesperado. Tente novamente.');
-      }
+      if (mounted) _showError('Erro inesperado. Tente novamente.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  void _goToVerifyEmail() {
+    Navigator.pushNamed(
+      context,
+      '/verify-email',
+      arguments: _emailController.text.trim(),
+    );
+  }
+
   void _showError(String message) {
     setState(() => _errorMessage = message);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 3),
       ),
     );
   }
 
   String _friendlyError(DioException e) {
-    if (e.response?.statusCode == 401) {
-      return 'E-mail ou senha incorretos.';
+    switch (e.response?.statusCode) {
+      case 401:
+        return 'E-mail ou senha incorretos.';
+      case 400:
+        return 'Dados inválidos. Verifique as informações.';
+      default:
+        if (e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout) {
+          return 'Conexão perdida. Verifique sua internet.';
+        }
+        return 'Erro ao conectar. Tente novamente.';
     }
-    if (e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout) {
-      return 'Conexão perdida. Verifique sua internet.';
-    }
-    return 'Erro ao conectar. Tente novamente.';
   }
 
   @override
@@ -236,6 +254,36 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
 
+                      if (_showVerifyEmailButton)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: OutlinedButton.icon(
+                              onPressed: _goToVerifyEmail,
+                              icon: const Icon(
+                                Icons.mark_email_unread_outlined,
+                                color: primaryGreen,
+                                size: 18,
+                              ),
+                              label: const Text(
+                                'Verificar meu e-mail',
+                                style: TextStyle(
+                                  color: primaryGreen,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: primaryGreen),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
                       SizedBox(
                         width: double.infinity,
                         height: 52,
@@ -243,19 +291,30 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: _isLoading ? () {} : _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryGreen,
+                            disabledBackgroundColor:
+                              primaryGreen.withOpacity(0.6),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text(
-                            _isLoading ? 'Aguarde...' : 'Entrar',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Text(
+                                'Entrar',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
                         ),
                       ),
                       const SizedBox(height: 20),
