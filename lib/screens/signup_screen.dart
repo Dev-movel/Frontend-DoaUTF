@@ -62,9 +62,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
 
       final requireVerification = await AuthService.instance.register(
-        nome: _nomeController.text.trim(),
-        email: _emailController.text.trim(),
-        senha: _senhaController.text,
+        nome:           _nomeController.text.trim(),
+        email:          _emailController.text.trim(),
+        senha:          _senhaController.text,
         dataNascimento: isoDate,
       );
 

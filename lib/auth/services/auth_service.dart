@@ -106,6 +106,32 @@ class AuthService {
     }
   }
 
+  Future<void> verifyEmail({
+    required String email,
+    required String codigo,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/verify-email',
+      data: {'email': email, 'codigo': codigo},
+    );
+
+    final data = response.data ?? {};
+    if (data.containsKey('access_token')) {
+      final tokens = AuthTokens.fromJson(data);
+      await TokenStorage.instance.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+    }
+  }
+
+  Future<void> resendVerificationCode({required String email}) async {
+    await _dio.post<void>(
+      '/auth/resend-verification',
+      data: {'email': email},
+    );
+  }
+
   Future<bool> refreshToken() async {
     try {
       final refreshToken = await TokenStorage.instance.getRefreshToken();
