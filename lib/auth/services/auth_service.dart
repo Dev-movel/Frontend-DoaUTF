@@ -31,36 +31,16 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    try {
-      debugPrint('Iniciando login para: $email');
-      
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/auth/login',
-        data: {'email': email, 'password': password},
-      );
-
-      debugPrint('Resposta recebida: ${response.statusCode}');
-      debugPrint('Dados: ${response.data}');
-
-      if (response.data == null) {
-        throw Exception('Resposta vazia do servidor');
-      }
-
-      final tokens = AuthTokens.fromJson(response.data!);
-      
-      debugPrint('Access Token: ${tokens.accessToken.substring(0, 20)}...');
-      debugPrint('Refresh Token: ${tokens.refreshToken.substring(0, 20)}...');
-
-      await TokenStorage.instance.saveTokens(
-        accessToken:  tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      );
-      
-      debugPrint('Tokens salvos com sucesso!');
-    } catch (e) {
-      debugPrint('Erro no login: $e');
-      rethrow;
-    }
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/login',
+      data: {'email': email, 'password': password},
+    );
+ 
+    final tokens = AuthTokens.fromJson(response.data!);
+    await TokenStorage.instance.saveTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    );
   }
 
   Future<bool> register({
@@ -115,6 +95,46 @@ class AuthService {
       data: {'email': email, 'codigo': codigo},
     );
 
+    final data = response.data ?? {};
+    if (data.containsKey('access_token')) {
+      final tokens = AuthTokens.fromJson(data);
+      await TokenStorage.instance.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+    }
+  }
+
+  Future<void> resendVerificationCode({required String email}) async {
+    await _dio.post<void>(
+      '/auth/resend-verification',
+      data: {'email': email},
+    );
+
+    final data = response.data ?? {};
+
+    if (data['requireVerification'] == true) return true;
+
+    if (data.containsKey('access_token')) {
+      final tokens = AuthTokens.fromJson(data);
+      await TokenStorage.instance.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+    }
+ 
+    return false;
+  }
+
+  Future<void> verifyEmail({
+    required String email,
+    required String codigo,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/verify-email',
+      data: {'email': email, 'codigo': codigo},
+    );
+ 
     final data = response.data ?? {};
     if (data.containsKey('access_token')) {
       final tokens = AuthTokens.fromJson(data);

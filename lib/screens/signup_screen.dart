@@ -39,7 +39,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  /// Converte dd/mm/yyyy para yyyy-MM-dd (formato esperado pelo back)
+  /// Converte dd/mm/yyyy para yyyy-MM-dd
   String? _toIsoDate(String ddmmyyyy) {
     if (ddmmyyyy.length != 10) return null;
     final parts = ddmmyyyy.split('/');
@@ -314,7 +314,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Mensagem de erro da API
               if (_errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),

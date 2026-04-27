@@ -6,6 +6,7 @@ import 'screens/signup_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'screens/verify_email_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -40,6 +41,12 @@ class MyApp extends StatelessWidget {
         '/register':        (_) => const SignUpScreen(),
       },
       onGenerateRoute: (RouteSettings settings) {
+        if (settings.name == '/verify-email') {
+          final email = settings.arguments as String? ?? '';
+          return MaterialPageRoute(
+            builder: (_) => VerifyEmailScreen(email: email),
+          );
+        }
         if (settings.name?.startsWith('/reset-password') ?? false) {
           final uri = Uri.parse(settings.name ?? '');
           final token = uri.queryParameters['token'];
