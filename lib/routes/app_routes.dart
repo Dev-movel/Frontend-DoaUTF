@@ -10,6 +10,7 @@ class AppRoutes {
         '/login': (_) => const LoginScreen(),
         '/home': (_) => const HomeScreen(),
         '/register': (_) => const SignUpScreen(),
+        '/doar': (_) => const CreateDonationScreen(),
       };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
