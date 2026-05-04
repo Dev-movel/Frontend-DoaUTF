@@ -241,28 +241,18 @@ class _HeroImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: Image.asset(
-        'assets/image/home.jpg',
-        height: isMobile ? 350 : 550,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          debugPrint('ERRO IMAGEM: $error');
-          return Container(
-            height: isMobile ? 350 : 550,
-            color: Colors.red,
-            child: Center(
-              child: Text(
-                '$error',
-                style: const TextStyle(color: Colors.white),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        },
+    return Container(
+      width: isMobile ? 320 : 520,
+      height: isMobile ? 320 : 550,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.grey.shade200,
       ),
+      clipBehavior: Clip.hardEdge,
+      child: Image.asset(
+  'assets/image/home.png',
+  fit: BoxFit.cover,
+)
     );
   }
 }

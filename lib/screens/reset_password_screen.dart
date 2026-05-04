@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
-import '../widgets/editorial_input.dart';
-import '../widgets/gradient_button.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import '../widgets/auth_modal_container.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String token;
@@ -25,7 +24,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
+  bool _successMessage = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    debugPrint(
+      'ResetPasswordScreen token: ${widget.token.substring(0, 20)}...',
+    );
+  }
 
   @override
   void dispose() {
@@ -40,6 +48,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _successMessage = false;
     });
 
     try {
@@ -51,223 +60,268 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
       );
 
-      await dio.post('/auth/reset-password', data: {
-        'token': widget.token,
-        'novaSenha': _senhaController.text,
-      });
+      final response = await dio.post<Map<String, dynamic>>(
+        '/auth/reset-password',
+        data: {
+          'token': widget.token,
+          'novaSenha': _senhaController.text,
+        },
+      );
+
+      debugPrint('Reset OK: ${response.statusCode}');
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Senha redefinida com sucesso!'),
-          backgroundColor: Colors.green,
-        ),
+      setState(() => _successMessage = true);
+
+      _showSnackbar(
+        'Senha redefinida com sucesso!',
+        isError: false,
       );
 
       await Future.delayed(const Duration(seconds: 2));
-      if (mounted) Navigator.pushReplacementNamed(context, '/login');
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     } on DioException catch (e) {
-      setState(() => _errorMessage = _friendlyError(e));
+      if (mounted) {
+        setState(() {
+          _errorMessage = _friendlyError(e);
+        });
+
+        _showSnackbar(_friendlyError(e), isError: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Erro inesperado. Tente novamente.';
+        });
+
+        _showSnackbar('Erro inesperado. Tente novamente.', isError: true);
+      }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   String _friendlyError(DioException e) {
-    if (e.response?.statusCode == 400) return 'Token inválido ou expirado';
-    return 'Erro ao redefinir senha. Tente novamente.';
+    if (e.response?.statusCode == 400) {
+      return e.response?.data?['erro'] ?? 'Token inválido ou expirado.';
+    }
+
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      return 'Conexão perdida. Verifique sua internet.';
+    }
+
+    return 'Erro ao redefinir senha.';
+  }
+
+  void _showSnackbar(String message, {bool isError = false}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor:
+            isError ? Colors.red.shade700 : Colors.green.shade700,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Usamos Material transparente para que o fundo do modal apareça corretamente
-    return Material(
-      color: Colors.transparent,
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 720,
-              maxHeight: 600, // Um pouco menor que o cadastro pois tem menos campos
-            ),
-            child: _buildModal(context),
-          ),
-        ),
-      ),
-    );
-  }
+    const Color primaryGreen = Color(0xFF2D7A1F);
+    const Color inputBg = Color(0xFFF0F0F0);
 
-  Widget _buildModal(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width > 600;
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF1A1C19).withOpacity(0.10),
-                blurRadius: 48,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          clipBehavior: Clip.hardEdge,
-          child: isWide
-              ? IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildSidePanel(),
-                      Expanded(child: _buildForm()),
-                    ],
-                  ),
-                )
-              : _buildForm(),
-        ),
-        Positioned(
-          top: 12,
-          right: 12,
-          child: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSidePanel() {
-    return SizedBox(
-      width: 200,
-      child: Stack(
-        fit: StackFit.expand,
+    return AuthModalContainer(
+      maxWidth: 500,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
+            padding: const EdgeInsets.all(10),
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1B5E20), Color(0xFF0D631B)],
-              ),
+              color: Color(0xFFF0F5EC),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.lock_reset_rounded,
+              color: primaryGreen,
+              size: 22,
             ),
           ),
-          Positioned(
-            left: 24,
-            right: 24,
-            bottom: 32,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Segurança', style: AppTextStyles.sideTitle),
-                const SizedBox(height: 8),
-                Text(
-                  'Proteja seu acesso para continuar sua jornada sustentável.',
-                  style: AppTextStyles.sideBody,
-                ),
-              ],
+          const SizedBox(height: 20),
+
+          Text(
+            _successMessage ? 'Senha redefinida!' : 'Redefinir senha',
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
             ),
           ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildForm() {
-    return Padding(
-      padding: const EdgeInsets.all(36),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Redefinir Senha', style: AppTextStyles.headline),
-            const SizedBox(height: 4),
-            Text(
-              'Escolha uma nova senha forte para sua conta.',
-              style: AppTextStyles.subtitle,
+          const SizedBox(height: 6),
+
+          Text(
+            _successMessage
+                ? 'Sua senha foi atualizada com sucesso.'
+                : 'Digite sua nova senha para acessar sua conta.',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black45,
             ),
-            const SizedBox(height: 32),
+          ),
 
-            Text('NOVA SENHA', style: AppTextStyles.label),
-            const SizedBox(height: 6),
-            EditorialInput(
-              hint: '••••••••',
-              icon: Icons.lock_outline_rounded,
-              obscure: _obscurePassword,
-              controller: _senhaController,
-              validator: (value) {
-                if (value == null || value.length < 6) return 'Mínimo 6 caracteres.';
-                return null;
-              },
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  size: 18,
-                  color: AppColors.outline,
+          const SizedBox(height: 28),
+
+          if (_successMessage)
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/login');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryGreen,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            Text('CONFIRMAR SENHA', style: AppTextStyles.label),
-            const SizedBox(height: 6),
-            EditorialInput(
-              hint: '••••••••',
-              icon: Icons.verified_user_outlined,
-              obscure: _obscureConfirm,
-              controller: _confirmacaoController,
-              validator: (value) {
-                if (value != _senhaController.text) return 'Senhas não coincidem.';
-                return null;
-              },
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  size: 18,
-                  color: AppColors.outline,
-                ),
-                onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(_errorMessage!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
-              ),
-
-            GradientButton(
-              label: _isLoading ? 'Processando...' : 'Atualizar Senha',
-              onPressed: _isLoading ? () {} : _handleResetPassword,
-            ),
-            const SizedBox(height: 20),
-
-            Center(
-              child: GestureDetector(
-                onTap: () => Navigator.pushReplacementNamed(context, '/login'),
-                child: RichText(
-                  text: TextSpan(
-                    style: AppTextStyles.body,
-                    text: 'Lembrou a senha? ',
-                    children: [
-                      TextSpan(text: 'Entrar', style: AppTextStyles.link),
-                    ],
+                child: const Text(
+                  'Ir para login',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
+            )
+          else
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _senhaController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      hintText: 'Nova senha',
+                      filled: true,
+                      fillColor: inputBg,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.length < 6) {
+                        return 'Mínimo 6 caracteres.';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _confirmacaoController,
+                    obscureText: _obscureConfirm,
+                    decoration: InputDecoration(
+                      hintText: 'Confirmar senha',
+                      filled: true,
+                      fillColor: inputBg,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirm
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirm = !_obscureConfirm;
+                          });
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value != _senhaController.text) {
+                        return 'Senhas não coincidem.';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed:
+                          _isLoading ? null : _handleResetPassword,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text(
+                              'Redefinir senha',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
