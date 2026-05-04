@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../auth/services/auth_service.dart';
+import '../widgets/password_hint.dart';
+import '../utils/validators.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String token;
@@ -205,6 +207,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             TextFormField(
                               controller: _senhaController,
                               obscureText: _obscurePassword,
+                              onChanged: (_) => setState(() {}),
                               decoration: InputDecoration(
                                 hintText: '••••••••',
                                 hintStyle: const TextStyle(color: Colors.black38),
@@ -233,13 +236,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                   },
                                 ),
                               ),
-                              validator: (value) {
-                                if (value == null || value.length < 6) {
-                                  return 'Mínimo 6 caracteres.';
-                                }
-                                return null;
-                              },
+                              validator: Validators.validatePassword,
                             ),
+                            const SizedBox(height: 8),
+                            PasswordHint(password: _senhaController.text),
                             const SizedBox(height: 16),
 
                             const Text(
