@@ -42,12 +42,23 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      final bool isAdmin = await AuthService.instance.login(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
       debugPrint('Tentando login com: $email');
       await AuthService.instance.login(email: email, password: password);
 
       if (!mounted) return;
       debugPrint('Login bem-sucedido! Redirecionando...');
-      Navigator.pushReplacementNamed(context, '/home');
+      //Navigator.pushReplacementNamed(context, '/home');
+      if (isAdmin) {
+        debugPrint('Redirecionando para a rota de Admin!');
+        Navigator.of(context).pushReplacementNamed('/admin'); 
+      } else {
+        debugPrint('Redirecionando para a Home padrão!');
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
     } on DioException catch (e) {
       debugPrint('DioException: ${e.message}');
       debugPrint('Status: ${e.response?.statusCode}');

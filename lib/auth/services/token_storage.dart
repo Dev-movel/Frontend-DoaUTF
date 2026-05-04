@@ -10,6 +10,7 @@ class TokenStorage {
 
   static const _keyAccess  = 'access_token';
   static const _keyRefresh = 'refresh_token';
+  static const _keyIsAdmin = 'is_admin'; 
 
   Future<String?> getAccessToken()  => _storage.read(key: _keyAccess);
   Future<String?> getRefreshToken() => _storage.read(key: _keyRefresh);
@@ -36,6 +37,16 @@ class TokenStorage {
     await Future.wait([
       _storage.delete(key: _keyAccess),
       _storage.delete(key: _keyRefresh),
+      _storage.delete(key: _keyIsAdmin), 
     ]);
+  }
+
+  Future<void> saveIsAdmin(bool isAdmin) async {
+    await _storage.write(key: _keyIsAdmin, value: isAdmin.toString());
+  }
+
+  Future<bool> getIsAdmin() async {
+    final value = await _storage.read(key: _keyIsAdmin);
+    return value == 'true';
   }
 }

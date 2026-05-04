@@ -27,7 +27,7 @@ class AuthService {
     receiveTimeout: const Duration(seconds: 30),
   ));
 
-  Future<void> login({
+  Future<bool> login({
     required String email,
     required String password,
   }) async {
@@ -41,6 +41,11 @@ class AuthService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     );
+    final data = response.data!;
+    debugPrint('Resposta completa do backend: $data');
+    final bool isAdmin = data['isAdmin'] ?? false;
+    await TokenStorage.instance.saveIsAdmin(isAdmin);
+    return isAdmin;//retornando a flag isAdmin, para redirecionar o admin para a homePage dos admins
   }
 
   Future<bool> register({

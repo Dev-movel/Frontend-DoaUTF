@@ -7,6 +7,7 @@ import 'screens/login_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/verify_email_screen.dart';
+import 'screens/admin_dashboard.dart';
 import 'screens/profile_screen.dart';
 import 'screens/dashboard_screen.dart';
 
@@ -41,6 +42,7 @@ class MyApp extends StatelessWidget {
         '/forgot-password': (_) => const ForgotPasswordScreen(),
         '/home':            (_) => const HomeScreen(),
         '/register':        (_) => const SignUpScreen(),
+        '/admin': (context) => const AdminDashboardScreen(),
         '/dashboard':       (_) => const DashboardScreen(),
         '/profile':         (_) => const ProfileScreen(),
       },
