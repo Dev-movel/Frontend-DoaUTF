@@ -16,7 +16,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
   late Future<List<dynamic>> _usuariosFuture;
 
-  final int totalUsuarios = 1245; // Fixo por enquanto
   final int doacoesConcluidas = 890; // Fixo por enquanto
 
   List<Map<String, dynamic>> doacoesAtivas = [
@@ -160,36 +159,48 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildIndicadoresGlobais() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: const BoxDecoration(
-        color: Color(0xFF2D7A1F),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _CardIndicador(
-              titulo: 'Total de Usuários',
-              valor: totalUsuarios.toString(),
-              icone: Icons.people_alt_rounded,
-              corIcone: const Color(0xFF2D7A1F),
+    return FutureBuilder<List<dynamic>>(
+      future: _usuariosFuture,
+      builder: (context, snapshot) {
+        
+        String totalReal = '...'; 
+        
+        if (snapshot.hasData) {
+          totalReal = snapshot.data!.length.toString();
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: const BoxDecoration(
+            color: Color(0xFF2D7A1F),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: _CardIndicador(
-              titulo: 'Doações Concluídas',
-              valor: doacoesConcluidas.toString(),
-              icone: Icons.check_circle_rounded,
-              corIcone: Colors.green,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _CardIndicador(
+                  titulo: 'Total de Usuários',
+                  valor: totalReal,
+                  icone: Icons.people_alt_rounded,
+                  corIcone: const Color(0xFF2D7A1F),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _CardIndicador(
+                  titulo: 'Doações Concluídas',
+                  valor: doacoesConcluidas.toString(),
+                  icone: Icons.check_circle_rounded,
+                  corIcone: Colors.green,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
