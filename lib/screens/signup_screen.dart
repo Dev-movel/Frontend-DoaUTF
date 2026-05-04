@@ -4,7 +4,9 @@ import '../theme/app_text_styles.dart';
 import '../widgets/editorial_input.dart';
 import '../widgets/date_picker_field.dart';
 import '../widgets/gradient_button.dart';
+import '../widgets/password_hint.dart';
 import '../auth/services/auth_service.dart';
+import '../utils/validators.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -60,10 +62,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
 
       final requireVerification = await AuthService.instance.register(
-        nome:            _nomeController.text.trim(),
-        email:           _emailController.text.trim(),
-        senha:           _senhaController.text,
-        dataNascimento:  isoDate,
+        nome:           _nomeController.text.trim(),
+        email:          _emailController.text.trim(),
+        senha:          _senhaController.text,
+        dataNascimento: isoDate,
       );
 
       if (!mounted) return;
@@ -80,9 +82,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
         Navigator.pushReplacementNamed(context, '/home');
       }
-    } on Exception catch (e) {
+    } catch (e) {
       setState(() {
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -255,12 +257,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           icon: Icons.lock_outline_rounded,
                           obscure: _obscurePassword,
                           controller: _senhaController,
-                          validator: (value) {
-                            if (value == null || value.length < 6) {
-                              return 'Mínimo 6 caracteres.';
-                            }
-                            return null;
-                          },
+                          validator: Validators.validatePassword,
+                          onChanged: (_) => setState(() {}),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
@@ -273,6 +271,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 () => _obscurePassword = !_obscurePassword),
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        // Hint dinâmico de requisitos de senha
+                        PasswordHint(password: _senhaController.text),
                       ],
                     ),
                   ),

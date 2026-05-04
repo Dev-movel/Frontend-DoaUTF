@@ -10,6 +10,7 @@ class EditorialInput extends StatelessWidget {
   final Widget? suffixIcon;
   final TextEditingController? controller;
   final String? Function(String?)? validator;
+  final void Function(String)? onChanged;
 
   const EditorialInput({
     super.key,
@@ -20,6 +21,7 @@ class EditorialInput extends StatelessWidget {
     this.suffixIcon,
     this.controller,
     this.validator,
+    this.onChanged,
   });
 
   @override
@@ -27,6 +29,7 @@ class EditorialInput extends StatelessWidget {
     return TextFormField(
       controller: controller,
       validator: validator,
+      onChanged: onChanged,
       keyboardType: keyboardType,
       obscureText: obscure,
       style: AppTextStyles.input,
