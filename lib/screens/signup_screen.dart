@@ -39,7 +39,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  /// Converte dd/mm/yyyy para yyyy-MM-dd
   String? _toIsoDate(String ddmmyyyy) {
     if (ddmmyyyy.length != 10) return null;
     final parts = ddmmyyyy.split('/');
@@ -56,6 +55,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       final isoDate = _toIsoDate(_dataController.text);
+
       if (isoDate == null) {
         setState(() => _errorMessage = 'Data de nascimento inválida.');
         return;
@@ -70,36 +70,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (!mounted) return;
 
-      if (requireVerification) {
-        Navigator.pushReplacementNamed(
-          context,
-          '/verify-email',
-          arguments: _emailController.text.trim(),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Conta criada com sucesso!')),
-        );
-        Navigator.pushReplacementNamed(context, '/home');
-      }
-    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Conta criada com sucesso!')),
+      );
+
+      Navigator.pop(context);
+    } on Exception catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
       });
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
+    return Material(
+      color: Colors.transparent,
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: const BoxConstraints(
+              maxWidth: 720,
+              maxHeight: 850,
+            ),
             child: _buildModal(context),
           ),
         ),
@@ -110,31 +108,44 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget _buildModal(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 600;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1A1C19).withValues(alpha: 0.10),
-            blurRadius: 48,
-            spreadRadius: -4,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: isWide
-          ? IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildSidePanel(),
-                  Expanded(child: _buildForm()),
-                ],
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1A1C19).withValues(alpha: 0.10),
+                blurRadius: 48,
+                spreadRadius: -4,
+                offset: const Offset(0, 12),
               ),
-            )
-          : _buildForm(),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: isWide
+              ? IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildSidePanel(),
+                      Expanded(child: _buildForm()),
+                    ],
+                  ),
+                )
+              : _buildForm(),
+        ),
+        Positioned(
+          top: 12,
+          right: 12,
+          child: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      ],
     );
   }
 
@@ -149,12 +160,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF1B5E20), Color(0xFF0D631B)],
+                colors: [
+                  Color(0xFF1B5E20),
+                  Color(0xFF0D631B),
+                ],
               ),
             ),
           ),
           Positioned.fill(
-            child: CustomPaint(painter: _LeafPatternPainter()),
+            child: CustomPaint(
+              painter: _LeafPatternPainter(),
+            ),
           ),
           Positioned(
             left: 24,
@@ -216,7 +232,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
               DatePickerField(
                 controller: _dataController,
                 validator: (value) {
-                  if (value != null && value.isNotEmpty && value.length != 10) {
+                  if (value != null &&
+                      value.isNotEmpty &&
+                      value.length != 10) {
                     return 'Data incompleta.';
                   }
                   return null;
@@ -267,8 +285,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               size: 18,
                               color: AppColors.outline,
                             ),
-                            onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -278,6 +299,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,8 +325,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               size: 18,
                               color: AppColors.outline,
                             ),
-                            onPressed: () => setState(
-                                () => _obscureConfirm = !_obscureConfirm),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirm = !_obscureConfirm;
+                              });
+                            },
                           ),
                         ),
                       ],
@@ -312,6 +337,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 12),
 
               if (_errorMessage != null)
@@ -319,7 +345,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
 
@@ -333,18 +362,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
               Center(
                 child: GestureDetector(
-                  onTap: () => Navigator.pushReplacementNamed(context, '/login'),
+                  onTap: () => Navigator.pop(context),
                   child: RichText(
                     text: TextSpan(
                       style: AppTextStyles.body,
                       text: 'Já possui uma conta? ',
                       children: [
-                        TextSpan(text: 'Entrar', style: AppTextStyles.link),
+                        TextSpan(
+                          text: 'Entrar',
+                          style: AppTextStyles.link,
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
+
               const SizedBox(height: 28),
 
               Container(
@@ -370,6 +403,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
 class _FieldLabel extends StatelessWidget {
   final String text;
+
   const _FieldLabel(this.text);
 
   @override
@@ -390,9 +424,12 @@ class _LeafPatternPainter extends CustomPainter {
     final spine = Path()
       ..moveTo(size.width * 0.5, size.height * 0.05)
       ..quadraticBezierTo(
-        size.width * 0.55, size.height * 0.5,
-        size.width * 0.45, size.height * 0.95,
+        size.width * 0.55,
+        size.height * 0.5,
+        size.width * 0.45,
+        size.height * 0.95,
       );
+
     canvas.drawPath(spine, paint);
 
     for (var i = 0; i < 8; i++) {
@@ -402,12 +439,16 @@ class _LeafPatternPainter extends CustomPainter {
       final sy = size.height * t;
       final ex = i % 2 == 0 ? size.width * 0.9 : size.width * 0.05;
       final ey = sy + size.height * 0.04;
+
       final path = Path()
         ..moveTo(sx, sy)
         ..quadraticBezierTo(
-          (sx + ex) / 2, sy - size.height * 0.01,
-          ex, ey,
+          (sx + ex) / 2,
+          sy - size.height * 0.01,
+          ex,
+          ey,
         );
+
       canvas.drawPath(path, paint);
     }
   }

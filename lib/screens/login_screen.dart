@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../auth/services/auth_service.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -62,15 +63,17 @@ class _LoginScreenState extends State<LoginScreen> {
     } on DioException catch (e) {
       debugPrint('DioException: ${e.message}');
       debugPrint('Status: ${e.response?.statusCode}');
-      if (e.response?.statusCode == 403) {
-        _showError('Você precisa verificar seu e-mail antes de entrar.');
-        setState(() => _showVerifyEmailButton = true);
-      } else {
+      debugPrint('Response: ${e.response?.data}');
+
+      if (mounted) {
         _showError(_friendlyError(e));
       }
     } catch (e) {
       debugPrint('Erro geral: $e');
-      if (mounted) _showError('Erro inesperado. Tente novamente.');
+
+      if (mounted) {
+        _showError('Erro inesperado. Tente novamente.');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -86,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showError(String message) {
     setState(() => _errorMessage = message);
-    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -100,18 +103,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String _friendlyError(DioException e) {
-    switch (e.response?.statusCode) {
-      case 401:
-        return 'E-mail ou senha incorretos.';
-      case 400:
-        return 'Dados inválidos. Verifique as informações.';
-      default:
-        if (e.type == DioExceptionType.connectionTimeout ||
-            e.type == DioExceptionType.receiveTimeout) {
-          return 'Conexão perdida. Verifique sua internet.';
-        }
-        return 'Erro ao conectar. Tente novamente.';
+    if (e.response?.statusCode == 401) {
+      return 'E-mail ou senha incorretos.';
     }
+
+    if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      return 'Conexão perdida. Verifique sua internet.';
+    }
+
+    return 'Erro ao conectar. Tente novamente.';
   }
 
   @override
@@ -119,13 +120,14 @@ class _LoginScreenState extends State<LoginScreen> {
     const Color primaryGreen = Color(0xFF2D7A1F);
     const Color inputBackground = Color(0xFFF0F0F0);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFEDEADF),
-      body: Center(
+    return Material(
+      color: Colors.transparent,
+      child: Center(
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Container(
+              constraints: const BoxConstraints(maxWidth: 430),
               padding: const EdgeInsets.all(28.0),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -168,6 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
+
                       const Text(
                         'Conecte-se com sua comunidade e comece a compartilhar.',
                         style: TextStyle(
@@ -236,11 +239,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: () {
                             Navigator.pushNamed(context, '/forgot-password');
                           },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(50, 30),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
                           child: const Text(
                             'Esqueci a senha',
                             style: TextStyle(
@@ -251,6 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 20),
 
                       if (_errorMessage != null)
@@ -328,15 +327,26 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                         ),
                       ),
+
                       const SizedBox(height: 20),
 
                       Center(
                         child: GestureDetector(
                           onTap: () {
-                            Navigator.pushNamed(context, '/register');
+                            Navigator.pop(context);
+
+                            showDialog(
+                              context: context,
+                              barrierDismissible: true,
+                              builder: (_) => const Dialog(
+                                backgroundColor: Colors.transparent,
+                                insetPadding: EdgeInsets.all(24),
+                                child: SignUpScreen(),
+                              ),
+                            );
                           },
-                          child: RichText(
-                            text: const TextSpan(
+                          child: const Text.rich(
+                            TextSpan(
                               text: 'Não tem uma conta? ',
                               style: TextStyle(
                                 color: Colors.black45,
@@ -361,23 +371,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   Positioned(
                     top: 0,
                     right: 0,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey.shade300),
-                        color: Colors.white,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(
-                          Icons.close,
-                          size: 18,
-                          color: Colors.grey,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
+                    child: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
                     ),
                   ),
                 ],
