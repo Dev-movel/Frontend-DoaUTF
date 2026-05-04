@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:doaai/auth/services/token_storage.dart';
+import 'package:doaai/auth/services/admin_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -13,13 +14,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   late TabController _tabController;
   bool _isLoading = true;
 
-  final int totalUsuarios = 1245;
-  final int doacoesConcluidas = 890;
+  late Future<List<dynamic>> _usuariosFuture;
 
-  List<Map<String, dynamic>> usuarios = [
-    {"nome": "Maria Silva", "email": "maria@email.com", "bloqueado": false},
-    {"nome": "João Pedro", "email": "joao.pedro@email.com", "bloqueado": true},
-  ];
+  final int totalUsuarios = 1245; // Fixo por enquanto
+  final int doacoesConcluidas = 890; // Fixo por enquanto
 
   List<Map<String, dynamic>> doacoesAtivas = [
     {"item": "Cadeira de Rodas", "doador": "Carlos", "data": "10/10/2023"},
@@ -31,6 +29,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _validarAcessoAdmin();
+
+    _usuariosFuture = AdminService.instance.buscarUsuarios();
   }
 
   Future<void> _validarAcessoAdmin() async {
@@ -59,25 +59,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     super.dispose();
   }
 
-  void _alternarBloqueioUsuario(int index) {
-    setState(() {
-      usuarios[index]["bloqueado"] = !usuarios[index]["bloqueado"];
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          usuarios[index]["bloqueado"]
-              ? 'Usuário bloqueado com sucesso.'
-              : 'Usuário desbloqueado com sucesso.',
-        ),
-        backgroundColor: usuarios[index]["bloqueado"]
-            ? Colors.red
-            : Colors.green,
-      ),
-    );
-  }
-
   void _fazerLogout() {
+    TokenStorage.instance.clearTokens();
     Navigator.of(context).pushReplacementNamed('/login');
   }
 
@@ -99,7 +82,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           'DoaAi - Backoffice',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Color(0xFF2D7A1F),
+        backgroundColor: const Color(0xFF2D7A1F),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -155,12 +138,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ListTile(
             leading: const Icon(Icons.report_problem),
             title: const Text('Denúncias de Doações'),
-            onTap: () {}, // Futura funcionalidade
+            onTap: () {},
           ),
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Configurações'),
-            onTap: () {}, // Futura funcionalidade
+            onTap: () {},
           ),
           const Divider(),
           ListTile(
@@ -193,7 +176,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               titulo: 'Total de Usuários',
               valor: totalUsuarios.toString(),
               icone: Icons.people_alt_rounded,
-              corIcone: Color(0xFF2D7A1F),
+              corIcone: const Color(0xFF2D7A1F),
             ),
           ),
           const SizedBox(width: 16),
@@ -215,9 +198,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: TabBar(
         controller: _tabController,
-        labelColor: Color(0xFF2D7A1F),
+        labelColor: const Color(0xFF2D7A1F),
         unselectedLabelColor: Colors.grey,
-        indicatorColor: Color(0xFF2D7A1F),
+        indicatorColor: const Color(0xFF2D7A1F),
         indicatorWeight: 3,
         tabs: const [
           Tab(icon: Icon(Icons.manage_accounts), text: 'Usuários'),
@@ -228,41 +211,117 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildListaUsuarios() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: usuarios.length,
-      itemBuilder: (context, index) {
-        final usuario = usuarios[index];
-        final bool isBloqueado = usuario["bloqueado"];
+    return FutureBuilder<List<dynamic>>(
+      future: _usuariosFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF2D7A1F)),
+          );
+        }
 
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: isBloqueado ? Colors.red[100] : Colors.blue[100],
-              child: Icon(
-                isBloqueado ? Icons.lock : Icons.person,
-                color: isBloqueado ? Colors.red : Colors.blue,
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Erro ao carregar usuários.\n${snapshot.error}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(
+            child: Text(
+              'Nenhum usuário cadastrado no sistema.',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          );
+        }
+
+        final usuariosCadastrados = snapshot.data!;
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: usuariosCadastrados.length,
+          itemBuilder: (context, index) {
+            final usuario = usuariosCadastrados[index];
+            final String nome = usuario['nome'] ?? 'Sem nome';
+            final String email = usuario['email'] ?? 'Sem e-mail';
+            
+            final int rawId = usuario['id'] ?? 0; 
+            final String idUsuario = rawId.toString();
+            
+            final bool isBloqueado = usuario['bloqueado'] == true;
+            
+            return Card(
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-            ),
-            title: Text(
-              usuario["nome"],
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(usuario["email"]),
-            trailing: IconButton(
-              icon: Icon(
-                isBloqueado ? Icons.lock_open : Icons.block,
-                color: isBloqueado ? Colors.green : Colors.red,
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: isBloqueado ? Colors.red[100] : Colors.blue[100],
+                  child: Icon(
+                    isBloqueado ? Icons.lock : Icons.person,
+                    color: isBloqueado ? Colors.red : Colors.blue,
+                  ),
+                ),
+                title: Text(
+                  nome,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(email),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'ID: $idUsuario',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        isBloqueado ? Icons.lock_open : Icons.block,
+                        color: isBloqueado ? Colors.green : Colors.red,
+                      ),
+                      tooltip: isBloqueado ? 'Desbloquear' : 'Bloquear',
+                      onPressed: () async {
+                        try {
+                          await AdminService.instance.atualizarUsuario(
+                            id: rawId, 
+                            bloqueado: !isBloqueado,
+                          );
+                          
+                          setState(() {
+                            _usuariosFuture = AdminService.instance.buscarUsuarios();
+                          });
+
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(isBloqueado ? 'Usuário desbloqueado!' : 'Usuário bloqueado!'),
+                              backgroundColor: isBloqueado ? Colors.green : Colors.red,
+                            ),
+                          );
+                        } catch (e) {
+                          // Mostra aviso de erro
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      },
+                    )
+                  ],
+                ),
               ),
-              tooltip: isBloqueado ? 'Desbloquear Usuário' : 'Bloquear Usuário',
-              onPressed: () => _alternarBloqueioUsuario(index),
-            ),
-          ),
+            );
+          },
         );
       },
     );
