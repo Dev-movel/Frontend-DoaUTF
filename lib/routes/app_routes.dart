@@ -4,6 +4,7 @@ import '../screens/signup_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/reset_password_screen.dart';
+import '../screens/create_donation_screen.dart';
 
 class AppRoutes {
   static Map<String, WidgetBuilder> get routes => {
