@@ -4,9 +4,7 @@ import '../theme/app_text_styles.dart';
 import '../widgets/editorial_input.dart';
 import '../widgets/date_picker_field.dart';
 import '../widgets/gradient_button.dart';
-import '../widgets/password_hint.dart';
 import '../auth/services/auth_service.dart';
-import '../utils/validators.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -39,7 +37,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  /// Converte dd/mm/yyyy para yyyy-MM-dd
   String? _toIsoDate(String ddmmyyyy) {
     if (ddmmyyyy.length != 10) return null;
     final parts = ddmmyyyy.split('/');
@@ -56,50 +53,54 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       final isoDate = _toIsoDate(_dataController.text);
+
       if (isoDate == null) {
-        setState(() => _errorMessage = 'Data de nascimento inválida.');
+        setState(() {
+          _errorMessage = 'Data inválida.';
+          _loading = false;
+        });
         return;
       }
 
-      final requireVerification = await AuthService.instance.register(
-        nome:           _nomeController.text.trim(),
-        email:          _emailController.text.trim(),
-        senha:          _senhaController.text,
+      await AuthService.instance.register(
+        nome: _nomeController.text.trim(),
+        email: _emailController.text.trim(),
+        senha: _senhaController.text,
         dataNascimento: isoDate,
       );
 
       if (!mounted) return;
 
-      if (requireVerification) {
-        Navigator.pushReplacementNamed(
-          context,
-          '/verify-email',
-          arguments: _emailController.text.trim(),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Conta criada com sucesso!')),
-        );
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Conta criada com sucesso!'),
+        ),
+      );
+
+      Navigator.pop(context);
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Center(
+    return Material(
+      color: Colors.transparent,
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: const BoxConstraints(
+              maxWidth: 900,
+              maxHeight: 850,
+            ),
             child: _buildModal(context),
           ),
         ),
@@ -108,39 +109,64 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Widget _buildModal(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width > 600;
+    final isWide = MediaQuery.of(context).size.width > 700;
 
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1A1C19).withValues(alpha: 0.10),
-            blurRadius: 48,
-            spreadRadius: -4,
-            offset: const Offset(0, 12),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       clipBehavior: Clip.hardEdge,
-      child: isWide
-          ? IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildSidePanel(),
-                  Expanded(child: _buildForm()),
-                ],
+      child: Stack(
+        children: [
+          isWide
+              ? IntrinsicHeight(
+                  child: Row(
+                    children: [
+                      _buildSidePanel(),
+                      Expanded(child: _buildForm()),
+                    ],
+                  ),
+                )
+              : _buildForm(),
+
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade300),
+                color: Colors.white,
               ),
-            )
-          : _buildForm(),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: const Icon(
+                  Icons.close,
+                  size: 18,
+                  color: Colors.grey,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSidePanel() {
     return SizedBox(
-      width: 200,
+      width: 240,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -149,12 +175,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF1B5E20), Color(0xFF0D631B)],
+                colors: [
+                  Color(0xFF1B5E20),
+                  Color(0xFF0D631B),
+                ],
               ),
             ),
           ),
           Positioned.fill(
-            child: CustomPaint(painter: _LeafPatternPainter()),
+            child: CustomPaint(
+              painter: _LeafPatternPainter(),
+            ),
           ),
           Positioned(
             left: 24,
@@ -162,12 +193,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
             bottom: 32,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text('DoaUTF', style: AppTextStyles.sideTitle),
+                Text(
+                  'DoaUTF',
+                  style: AppTextStyles.sideTitle,
+                ),
                 const SizedBox(height: 8),
                 Text(
-                  'Semeando consciência, colhendo um futuro sustentável para todos.',
+                  'Semeando consciência,\ncolhendo um futuro sustentável.',
                   style: AppTextStyles.sideBody,
                 ),
               ],
@@ -187,21 +220,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Crie sua conta', style: AppTextStyles.headline),
-              const SizedBox(height: 4),
               Text(
-                'Inicie sua jornada no arquivo da sustentabilidade.',
+                'Crie sua conta',
+                style: AppTextStyles.headline,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Comece sua jornada no DoaUTF.',
                 style: AppTextStyles.subtitle,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
 
               const _FieldLabel('NOME COMPLETO'),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               EditorialInput(
-                hint: 'Ex: Maria Silva',
-                icon: Icons.person_outline_rounded,
-                keyboardType: TextInputType.name,
                 controller: _nomeController,
+                hint: 'Maria Silva',
+                icon: Icons.person_outline,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Informe seu nome.';
@@ -209,71 +244,71 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               const _FieldLabel('DATA DE NASCIMENTO'),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               DatePickerField(
                 controller: _dataController,
                 validator: (value) {
-                  if (value != null && value.isNotEmpty && value.length != 10) {
-                    return 'Data incompleta.';
+                  if (value == null || value.length != 10) {
+                    return 'Informe uma data válida.';
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               const _FieldLabel('E-MAIL INSTITUCIONAL'),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               EditorialInput(
-                hint: 'usuario@alunos.utfpr.edu.br',
-                icon: Icons.school_outlined,
-                keyboardType: TextInputType.emailAddress,
                 controller: _emailController,
+                hint: 'usuario@alunos.utfpr.edu.br',
+                icon: Icons.email_outlined,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Informe seu e-mail.';
                   }
-                  if (!value.trim().endsWith('@alunos.utfpr.edu.br')) {
-                    return 'Use seu e-mail @alunos.utfpr.edu.br.';
+                  if (!value.contains('@')) {
+                    return 'E-mail inválido.';
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const _FieldLabel('SENHA'),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
                         EditorialInput(
-                          hint: '••••••••',
-                          icon: Icons.lock_outline_rounded,
-                          obscure: _obscurePassword,
                           controller: _senhaController,
-                          validator: Validators.validatePassword,
-                          onChanged: (_) => setState(() {}),
+                          hint: '••••••••',
+                          icon: Icons.lock_outline,
+                          obscure: _obscurePassword,
+                          validator: (value) {
+                            if (value == null || value.length < 6) {
+                              return 'Mínimo 6 caracteres.';
+                            }
+                            return null;
+                          },
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
-                              size: 18,
-                              color: AppColors.outline,
                             ),
-                            onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        // Hint dinâmico de requisitos de senha
-                        PasswordHint(password: _senhaController.text),
                       ],
                     ),
                   ),
@@ -282,13 +317,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _FieldLabel('CONFIRMAÇÃO'),
-                        const SizedBox(height: 6),
+                        const _FieldLabel('CONFIRMAR'),
+                        const SizedBox(height: 8),
                         EditorialInput(
+                          controller: _confirmacaoController,
                           hint: '••••••••',
                           icon: Icons.verified_user_outlined,
                           obscure: _obscureConfirm,
-                          controller: _confirmacaoController,
                           validator: (value) {
                             if (value != _senhaController.text) {
                               return 'Senhas não coincidem.';
@@ -300,11 +335,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               _obscureConfirm
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
-                              size: 18,
-                              color: AppColors.outline,
                             ),
-                            onPressed: () => setState(
-                                () => _obscureConfirm = !_obscureConfirm),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirm = !_obscureConfirm;
+                              });
+                            },
                           ),
                         ),
                       ],
@@ -312,52 +348,45 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+
+              const SizedBox(height: 20),
 
               if (_errorMessage != null)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: 16),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
-
-              const SizedBox(height: 20),
 
               GradientButton(
                 label: _loading ? 'Aguarde...' : 'Criar Conta',
                 onPressed: _loading ? () {} : _submit,
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 18),
 
               Center(
                 child: GestureDetector(
-                  onTap: () => Navigator.pushReplacementNamed(context, '/login'),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
                   child: RichText(
                     text: TextSpan(
+                      text: 'Já possui conta? ',
                       style: AppTextStyles.body,
-                      text: 'Já possui uma conta? ',
                       children: [
-                        TextSpan(text: 'Entrar', style: AppTextStyles.link),
+                        TextSpan(
+                          text: 'Entrar',
+                          style: AppTextStyles.link,
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              Container(
-                height: 1,
-                color: AppColors.outlineVariant.withValues(alpha: 0.2),
-              ),
-              const SizedBox(height: 16),
-
-              Center(
-                child: Text(
-                  'Ao se inscrever, você concorda com nossos Termos de Serviço e Relatório de Sustentabilidade.',
-                  style: AppTextStyles.legal,
-                  textAlign: TextAlign.center,
                 ),
               ),
             ],
@@ -374,7 +403,10 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: AppTextStyles.label);
+    return Text(
+      text,
+      style: AppTextStyles.label,
+    );
   }
 }
 
@@ -382,36 +414,22 @@ class _LeafPatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.06)
+      ..color = Colors.white.withOpacity(0.05)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = 1.4;
 
-    final spine = Path()
-      ..moveTo(size.width * 0.5, size.height * 0.05)
+    final path = Path()
+      ..moveTo(size.width * 0.5, 0)
       ..quadraticBezierTo(
-        size.width * 0.55, size.height * 0.5,
-        size.width * 0.45, size.height * 0.95,
+        size.width * 0.7,
+        size.height * 0.5,
+        size.width * 0.4,
+        size.height,
       );
-    canvas.drawPath(spine, paint);
 
-    for (var i = 0; i < 8; i++) {
-      final t = 0.1 + i * 0.1;
-      final sx =
-          size.width * 0.5 + (size.width * 0.05 * (i % 2 == 0 ? 1 : -1));
-      final sy = size.height * t;
-      final ex = i % 2 == 0 ? size.width * 0.9 : size.width * 0.05;
-      final ey = sy + size.height * 0.04;
-      final path = Path()
-        ..moveTo(sx, sy)
-        ..quadraticBezierTo(
-          (sx + ex) / 2, sy - size.height * 0.01,
-          ex, ey,
-        );
-      canvas.drawPath(path, paint);
-    }
+    canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
