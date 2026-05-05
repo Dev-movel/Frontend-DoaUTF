@@ -10,6 +10,7 @@ import 'screens/verify_email_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/profile_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/publicar_doacao_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -45,6 +46,7 @@ class MyApp extends StatelessWidget {
         '/admin': (context) => const AdminDashboardScreen(),
         '/dashboard':       (_) => const DashboardScreen(),
         '/profile':         (_) => const ProfileScreen(),
+        '/publicar-doacao': (_) => const PublicarDoacaoScreen(),
       },
       onGenerateRoute: (RouteSettings settings) {
         if (settings.name == '/verify-email') {
