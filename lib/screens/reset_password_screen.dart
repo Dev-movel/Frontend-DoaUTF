@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../auth/services/auth_service.dart';
-import '../widgets/password_hint.dart';
-import '../utils/validators.dart';
+import 'package:flutter/material.dart';
+
+import '../widgets/auth_modal_container.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String token;
@@ -25,13 +24,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
-  String? _errorMessage;
   bool _successMessage = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    debugPrint('ResetPasswordScreen inicializado com token: ${widget.token.substring(0, 20)}...');
+    debugPrint(
+      'ResetPasswordScreen token: ${widget.token.substring(0, 20)}...',
+    );
   }
 
   @override
@@ -51,8 +52,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
 
     try {
-      debugPrint('Resetando senha com token: ${widget.token.substring(0, 20)}...');
-      
       final dio = Dio(
         BaseOptions(
           baseUrl: 'http://localhost:3000',
@@ -69,59 +68,66 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         },
       );
 
-      debugPrint('Resposta recebida: ${response.statusCode}');
-      debugPrint('Dados: ${response.data}');
+      debugPrint('Reset OK: ${response.statusCode}');
 
       if (!mounted) return;
 
       setState(() => _successMessage = true);
-      
+
       _showSnackbar(
-        'Senha redefinida com sucesso! Redirecionando para login...',
+        'Senha redefinida com sucesso!',
         isError: false,
       );
 
       await Future.delayed(const Duration(seconds: 2));
+
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/login');
       }
     } on DioException catch (e) {
-      debugPrint('DioException: ${e.message}');
-      debugPrint('Status: ${e.response?.statusCode}');
-      debugPrint('Response: ${e.response?.data}');
-      
       if (mounted) {
+        setState(() {
+          _errorMessage = _friendlyError(e);
+        });
+
         _showSnackbar(_friendlyError(e), isError: true);
       }
     } catch (e) {
-      debugPrint('Erro geral: $e');
       if (mounted) {
+        setState(() {
+          _errorMessage = 'Erro inesperado. Tente novamente.';
+        });
+
         _showSnackbar('Erro inesperado. Tente novamente.', isError: true);
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   String _friendlyError(DioException e) {
     if (e.response?.statusCode == 400) {
-      final erro = e.response?.data?['erro'] ?? 'Token inválido ou expirado';
-      return erro;
+      return e.response?.data?['erro'] ?? 'Token inválido ou expirado.';
     }
+
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
       return 'Conexão perdida. Verifique sua internet.';
     }
-    return 'Erro ao redefinir senha. Tente novamente.';
+
+    return 'Erro ao redefinir senha.';
   }
 
   void _showSnackbar(String message, {bool isError = false}) {
     if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
-        duration: const Duration(seconds: 4),
+        backgroundColor:
+            isError ? Colors.red.shade700 : Colors.green.shade700,
       ),
     );
   }
@@ -129,264 +135,193 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     const Color primaryGreen = Color(0xFF2D7A1F);
-    const Color inputBackground = Color(0xFFF0F0F0);
+    const Color inputBg = Color(0xFFF0F0F0);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFEDEADF),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Container(
-              padding: const EdgeInsets.all(28.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
+    return AuthModalContainer(
+      maxWidth: 500,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF0F5EC),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.lock_reset_rounded,
+              color: primaryGreen,
+              size: 22,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          Text(
+            _successMessage ? 'Senha redefinida!' : 'Redefinir senha',
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(
+            _successMessage
+                ? 'Sua senha foi atualizada com sucesso.'
+                : 'Digite sua nova senha para acessar sua conta.',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black45,
+            ),
+          ),
+
+          const SizedBox(height: 28),
+
+          if (_successMessage)
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/login');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryGreen,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                ),
+                child: const Text(
+                  'Ir para login',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              child: Stack(
-                clipBehavior: Clip.none,
+            )
+          else
+            Form(
+              key: _formKey,
+              child: Column(
                 children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF0F5EC),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.lock_reset_rounded,
-                          color: primaryGreen,
-                          size: 22,
-                        ),
+                  TextFormField(
+                    controller: _senhaController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      hintText: 'Nova senha',
+                      filled: true,
+                      fillColor: inputBg,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
-                      const SizedBox(height: 20),
-
-                      const Text(
-                        'Redefinir Senha',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                         ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Digite sua nova senha para reativar sua conta.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black45,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'NOVA SENHA',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black54,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _senhaController,
-                              obscureText: _obscurePassword,
-                              onChanged: (_) => setState(() {}),
-                              decoration: InputDecoration(
-                                hintText: '••••••••',
-                                hintStyle: const TextStyle(color: Colors.black38),
-                                filled: true,
-                                fillColor: inputBackground,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: Colors.grey,
-                                    size: 20,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
-                                ),
-                              ),
-                              validator: Validators.validatePassword,
-                            ),
-                            const SizedBox(height: 8),
-                            PasswordHint(password: _senhaController.text),
-                            const SizedBox(height: 16),
-
-                            const Text(
-                              'CONFIRMAR SENHA',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black54,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _confirmacaoController,
-                              obscureText: _obscureConfirm,
-                              decoration: InputDecoration(
-                                hintText: '••••••••',
-                                hintStyle: const TextStyle(color: Colors.black38),
-                                filled: true,
-                                fillColor: inputBackground,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscureConfirm
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: Colors.grey,
-                                    size: 20,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscureConfirm = !_obscureConfirm;
-                                    });
-                                  },
-                                ),
-                              ),
-                              validator: (value) {
-                                if (value != _senhaController.text) {
-                                  return 'Senhas não coincidem.';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-
-                            if (_errorMessage != null)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(
-                                    color: Colors.redAccent,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-
-                            SizedBox(
-                              width: double.infinity,
-                              height: 52,
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? () {} : _handleResetPassword,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryGreen,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: Text(
-                                  _isLoading ? 'Aguarde...' : 'Redefinir Senha',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            Center(
-                              child: GestureDetector(
-                                onTap: () => Navigator.pushReplacementNamed(
-                                  context,
-                                  '/login',
-                                ),
-                                child: RichText(
-                                  text: const TextSpan(
-                                    text: 'Voltar para ',
-                                    style: TextStyle(
-                                      color: Colors.black45,
-                                      fontSize: 14,
-                                    ),
-                                    children: [
-                                      TextSpan(
-                                        text: 'Login',
-                                        style: TextStyle(
-                                          color: primaryGreen,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
+                    validator: (value) {
+                      if (value == null || value.length < 6) {
+                        return 'Mínimo 6 caracteres.';
+                      }
+                      return null;
+                    },
                   ),
 
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey.shade300),
-                        color: Colors.white,
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _confirmacaoController,
+                    obscureText: _obscureConfirm,
+                    decoration: InputDecoration(
+                      hintText: 'Confirmar senha',
+                      filled: true,
+                      fillColor: inputBg,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(
-                          Icons.close,
-                          size: 18,
-                          color: Colors.grey,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirm
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                         ),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirm = !_obscureConfirm;
+                          });
+                        },
                       ),
+                    ),
+                    validator: (value) {
+                      if (value != _senhaController.text) {
+                        return 'Senhas não coincidem.';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed:
+                          _isLoading ? null : _handleResetPassword,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text(
+                              'Redefinir senha',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ),
+        ],
       ),
     );
   }
