@@ -3,8 +3,9 @@ import '../models/usuario.dart';
 import '../models/doacao.dart';
 import '../services/usuario_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/donation_card.dart';
 import '../widgets/change_password_modal.dart';
+import '../widgets/donation_card.dart';
+import '../widgets/main_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -112,37 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        title: const Text('DoaUTF', 
-          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pushNamed(context, '/home'), child: const Text('Home', style: TextStyle(color: AppColors.onSurface))),
-          TextButton(onPressed: () {}, child: const Text('Mapa', style: TextStyle(color: AppColors.onSurface))),
-          TextButton(onPressed: () {}, child: const Text('Doar', style: TextStyle(color: AppColors.onSurface))),
-          TextButton(
-            onPressed: () => Navigator.pushNamed(context, '/dashboard'), 
-            child: const Text('Dashboard', style: TextStyle(color: AppColors.onSurface))
-          ),
-          TextButton(
-            onPressed: () {}, 
-            child: const Text('Perfil', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))
-          ),
-          const SizedBox(width: 20),
-          const Icon(Icons.notifications_none, color: AppColors.onSurface),
-          const SizedBox(width: 10),
-          CircleAvatar(
-            radius: 15, 
-            backgroundColor: AppColors.primary,
-            child: Text(
-              _usuario != null ? _usuario!.nome[0].toUpperCase() : '?',
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-          const SizedBox(width: 20),
-        ],
-      ),
+      appBar: const MainAppBar(activeRoute: '/profile'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : _usuario == null
