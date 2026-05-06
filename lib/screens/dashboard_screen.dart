@@ -47,9 +47,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('DoaUTF', 
           style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
         actions: [
-          TextButton(onPressed: () {}, child: const Text('Home', style: TextStyle(color: AppColors.onSurface))),
+          TextButton(onPressed: () => Navigator.pushNamed(context, '/home'), child: const Text('Home', style: TextStyle(color: AppColors.onSurface))),
           TextButton(onPressed: () {}, child: const Text('Mapa', style: TextStyle(color: AppColors.onSurface))),
-          TextButton(onPressed: () {}, child: const Text('Doar', style: TextStyle(color: AppColors.onSurface))),
+          TextButton(onPressed: () => Navigator.pushNamed(context, '/doar'), child: const Text('Doar', style: TextStyle(color: AppColors.onSurface))),
           TextButton(onPressed: () {}, child: const Text('Dashboard', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))),
           TextButton(
             onPressed: () => Navigator.pushNamed(context, '/profile'), 

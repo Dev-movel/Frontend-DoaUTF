@@ -7,6 +7,9 @@ import 'screens/signup_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/create_donation_screen.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/profile_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -43,6 +46,9 @@ class MyApp extends StatelessWidget {
         '/login': (_) => const LoginScreen(),
         '/home': (_) => const HomeScreen(),
         '/register': (_) => const SignUpScreen(),
+        '/doar': (_) => const CreateDonationScreen(),
+        '/dashboard': (_) => const DashboardScreen(),
+        '/profile': (_) => const ProfileScreen(),
       },
 
       onGenerateRoute: (RouteSettings settings) {

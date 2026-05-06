@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../auth/services/token_storage.dart';
 import '../theme/app_colors.dart';
 import 'home_screen.dart';
-import 'map_screen.dart';
-import 'donate_screen.dart';
+// import 'map_screen.dart';
+import 'create_donation_screen.dart';
 import 'dashboard_screen.dart';
 import 'profile_screen.dart';
 
@@ -19,8 +19,8 @@ class _MainShellState extends State<MainShell> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    MapScreen(),
-    DonateScreen(),
+    // MapScreen(),
+    CreateDonationScreen(),
     DashboardScreen(),
     ProfileScreen(),
   ];

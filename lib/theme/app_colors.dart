@@ -78,4 +78,24 @@ class AppColors {
   // =========================
   static const inverseSurface = Color(0xFF2F312E);
   static const inverseOnSurface = Color(0xFFF1F1EC);
+
+  // =========================
+  // Status badges
+  // =========================
+  static const statusAguardandoBg   = Color(0xFFFFF3E0);
+  static const statusAguardandoText = Color(0xFFE65100);
+
+  static const statusAnunciadoBg    = Color(0xFFE3F2FD);
+  static const statusAnunciadoText  = Color(0xFF0D47A1);
+
+  static const statusConcluidoBg    = Color(0xFFE8F5E9);
+  static const statusConcluidoText  = Color(0xFF1B5E20);
+
+  static const statusCanceladoBg    = Color(0xFFFFEBEE);
+  static const statusCanceladoText  = Color(0xFFB71C1C);
+
+  // =========================
+  // Aliases de tela
+  // =========================
+  static const profileGreen = primaryContainer;
 }
