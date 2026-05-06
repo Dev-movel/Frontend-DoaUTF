@@ -1,10 +1,11 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/doacao_form.dart';
 import '../services/doacao_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/main_app_bar.dart';
 
 const _kBg        = Color(0xFFFAFAF5);
 const _kSurface   = Color(0xFFF4F4EF);
@@ -275,21 +276,22 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
     _form.descricao = _descCtrl.text.trim();
   }
 
-  Future<void> _publish() async {
-    if (!_validateStep2()) return;
-    _syncControllers();
-    setState(() => _isLoading = true);
-    try {
-      await DoacaoService.instance.publicar(_form);
-      if (!mounted) return;
-      _showSuccess('Doação publicada com sucesso!');
-      Navigator.pushReplacementNamed(context, '/dashboard');
-    } catch (e) {
-      _showError(e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+Future<void> _publish() async {
+  _syncControllers();
+  final step2ok = _validateStep2();
+  if (!step2ok) return;
+  setState(() => _isLoading = true);
+  try {
+    await DoacaoService.instance.publicar(_form);
+    if (!mounted) return;
+    _showSuccess('Doação publicada com sucesso!');
+    Navigator.pushReplacementNamed(context, '/dashboard');
+  } catch (e) {
+    _showError(e.toString().replaceFirst('Exception: ', ''));
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
 
   Future<void> _saveDraft() async {
     _syncControllers();
@@ -320,23 +322,14 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
       },
       child: Scaffold(
         backgroundColor: _kBg,
-        appBar: AppBar(
-          backgroundColor: _kBg,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
+        appBar: MainAppBar(
+          activeRoute: '/doar',
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_rounded, color: AppColors.onSurface),
             onPressed: () {
               if (_step > 0) setState(() => _step--);
               else Navigator.pop(context);
             },
-          ),
-          title: Text(
-            'Publicar Doação',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 18, fontWeight: FontWeight.w700,
-              color: AppColors.onSurface, letterSpacing: -0.4,
-            ),
           ),
         ),
         body: Column(
@@ -1196,7 +1189,16 @@ class _PhotoThumbnail extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(10),
-          child: Image.file(File(xfile.path), fit: BoxFit.cover),
+          child: FutureBuilder<Uint8List>(
+            future: xfile.readAsBytes(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+              return Image.memory(snapshot.data!, fit: BoxFit.cover);
+              }
+    return const CircularProgressIndicator(); // Carregando...
+  },
+),
+
         ),
         Positioned(
           top: 4, right: 4,

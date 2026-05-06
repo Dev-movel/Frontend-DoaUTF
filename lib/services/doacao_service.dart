@@ -26,9 +26,9 @@ class DoacaoService {
 
   Future<List<CategoriaItem>> buscarCategorias() async {
     try {
-      final options  = await _getAuthOptions();
-      final response = await _dio.get('/categorias', options: options);
-      final list     = response.data as List<dynamic>;
+      // Sem autenticação — rota pública
+      final response = await _dio.get('/categorias');
+      final list = response.data as List<dynamic>;
       return list
           .map((e) => CategoriaItem(
                 id:   e['id']   as int,
@@ -36,23 +36,33 @@ class DoacaoService {
               ))
           .toList();
     } on DioException catch (e) {
-      debugPrint('❌ [GET /categorias] Erro: ${e.response?.data}');
+      debugPrint('❌ [GET /categorias] ${e.response?.statusCode} – ${e.response?.data}');
       throw Exception(_extractError(e) ?? 'Erro ao buscar categorias.');
     }
   }
 
   Future<void> publicar(DoacaoForm form) async {
     try {
-      final options  = await _getAuthOptions();
+      debugPrint('🔑 buscando token...');
+      final options = await _getAuthOptions();
+      debugPrint('🔑 token ok');
+      
+      debugPrint('🔨 buildFormData...');
       final formData = await _buildFormData(form);
-      await _dio.post('/itens', data: formData, options: options);
-      debugPrint('✅ [POST /itens] Item cadastrado com sucesso!');
+      debugPrint('🔨 formData ok');
+      
+      final response = await _dio.post('/itens', data: formData, options: options);
+      debugPrint('✅ [POST /itens] ${response.statusCode}');
     } on DioException catch (e) {
-      debugPrint('❌ [POST /itens] Erro: ${e.response?.data}');
+      debugPrint('❌ DioException: ${e.response?.statusCode} – ${e.response?.data}');
       throw Exception(_extractError(e) ?? 'Erro ao publicar doação.');
+    } catch (e, stack) {
+      debugPrint('❌ Erro genérico: $e');
+      debugPrint('❌ Stack: $stack');
+      throw Exception('Erro ao publicar doação.');
     }
   }
-
+  
   Future<void> salvarRascunho(DoacaoForm form) async {
     throw Exception('Rascunho não suportado pelo servidor no momento.');
   }
@@ -61,15 +71,16 @@ class DoacaoService {
     final fields = <String, dynamic>{
       'titulo'            : form.titulo,
       'descricao'         : form.descricao,
-      'categoria_id'      : form.categoriaId,
+      'categoria_id'      : form.categoriaId.toString(),
       'estado_conservacao': _mapEstado(form.estadoConservacao),
       'local_retirada'    : form.localRetirada,
     };
 
     final List<MultipartFile> imagens = [];
     for (final xfile in form.fotos) {
-      imagens.add(await MultipartFile.fromFile(
-        xfile.path,
+      final bytes = await xfile.readAsBytes();
+      imagens.add(MultipartFile.fromBytes(
+        bytes,
         filename: xfile.name,
       ));
     }
