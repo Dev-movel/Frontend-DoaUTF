@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 import '../auth/services/auth_service.dart';
 import '../widgets/auth_modal_container.dart';
@@ -42,8 +41,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      debugPrint('Tentando login com: $email');
-
       await AuthService.instance.login(
         email: email,
         password: password,
@@ -51,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/dashboard');
     } on DioException catch (e) {
       if (mounted) {
         _showError(_friendlyError(e));
