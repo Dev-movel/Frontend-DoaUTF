@@ -3,9 +3,11 @@ import '../theme/app_colors.dart';
 import '../services/usuario_service.dart';
 import '../widgets/main_app_bar.dart';
 import 'agendamento_screen.dart'; 
+import '../models/usuario.dart';
+import '../models/doacao.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -13,7 +15,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
-  String _nomeUsuario = 'Usuário';
+  Usuario? _usuario;
+  List<Doacao> _minhasDoacoes = [];
 
   @override
   void initState() {
@@ -25,7 +28,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await UsuarioService.instance.getMe();
-      if (mounted) setState(() => _nomeUsuario = user.nome);
+      final donations = await UsuarioService.instance.getMyDonations();
+      setState(() {
+        _usuario = user;
+        _minhasDoacoes = donations;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,7 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   spacing: 24,
                   runSpacing: 24,
                   children: [
-                    _buildStatCard('24', 'ITENS DOADOS', Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth),
+                    _buildStatCard('${_minhasDoacoes.length}', 'ITENS DOADOS', Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth),
                     _buildStatCard('12', 'ITENS RECEBIDOS', Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth),
                     _buildStatCard('942', 'PONTUAÇÃO DE SUSTENTABILIDADE', Icons.eco_outlined, AppColors.surface, AppColors.onSurface, cardWidth),
                   ],
@@ -173,10 +180,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       _buildSectionHeader('Minhas Doações Atuais'),
                       const SizedBox(height: 16),
-                      _buildDonationCard('Relógio Seiko Vintage', 'Retirada agendada para amanhã, 14h', 'AGUARDANDO RETIRADA', Colors.orange.shade100),
-                      const SizedBox(height: 12),
-                      _buildDonationCard('Tênis Esportivo Vermelho', '2 pedidos ativos pendentes', 'ANUNCIADO', Colors.green.shade100),
-                      
+                      if (_minhasDoacoes.isEmpty)
+                        const Text('Ainda não há doações ativas.', style: TextStyle(color: AppColors.outline))
+                      else
+                        ..._minhasDoacoes.map((doacao) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildDonationCard(
+                            doacao.titulo,
+                            'Status atual: ${doacao.status}',
+                            doacao.status.toUpperCase(),
+                            _getStatusColor(doacao.status),
+                          ),
+                        )),
                       const SizedBox(height: 32),
                       _buildSectionHeader('Meus Pedidos'),
                       const SizedBox(height: 16),
@@ -228,10 +243,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: textCol.withOpacity(0.8)),
+          Icon(icon, color: textCol.withValues(alpha: 0.8)),
           const SizedBox(height: 16),
           Text(value, style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: textCol)),
-          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textCol.withOpacity(0.7))),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textCol.withValues(alpha: 0.7))),
         ],
       ),
     );
@@ -245,6 +260,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         TextButton(onPressed: () {}, child: const Text('Ver Tudo', style: TextStyle(color: AppColors.primaryContainer))),
       ],
     );
+  }
+
+  Color _getStatusColor(String status) {
+    final normalized = status.toLowerCase();
+    if (normalized.contains('aguardando') || normalized.contains('pendente')) {
+      return Colors.orange.shade100;
+    }
+    if (normalized.contains('anunciado') || normalized.contains('aprovado') || normalized.contains('concluído') || normalized.contains('concluido')) {
+      return Colors.green.shade100;
+    }
+    return AppColors.containerHigh;
   }
 
   Widget _buildDonationCard(String title, String subtitle, String tag, Color tagBg) {
@@ -283,7 +309,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: AppColors.containerHigh.withOpacity(0.3), borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: AppColors.containerHigh.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(16)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 16),
