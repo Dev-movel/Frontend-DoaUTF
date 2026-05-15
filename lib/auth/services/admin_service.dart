@@ -13,19 +13,36 @@ class AdminService {
     ),
   );
 
-  Future<List<dynamic>> buscarUsuarios() async {
+Future<List<dynamic>> buscarUsuarios() async {
     try {
-      final token = await TokenStorage.instance.getAccessToken();
+      String? token;
+      try {
+        token = await TokenStorage.instance.getAccessToken();
+      } catch (e) {
+        debugPrint('Erro ao ler token no storage: $e');
+      }
 
       final response = await _dio.get(
         '/usuarios',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        options: Options(headers: {
+          'Authorization': 'Bearer $token',
+        }),
       );
 
-      return response.data as List<dynamic>;
-    } catch (e) {
-      debugPrint('Erro ao buscar usuários: $e');
+      if (response.data is List) {
+        return response.data as List<dynamic>;
+      } else {
+        return response.data['usuarios'] ?? []; 
+      }
+
+    } on DioException catch (e) {
+      debugPrint('Status Code: ${e.response?.statusCode}');
+      debugPrint('Mensagem: ${e.message}');
+      debugPrint('Erro Dio: ${e.response?.data}');
       throw Exception('Erro ao carregar usuários.');
+    } catch (e) {
+      debugPrint('Erro inesperado no buscarUsuarios: $e');
+      throw Exception('Erro inesperado ao buscar usuários.');
     }
   }
 

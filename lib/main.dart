@@ -10,6 +10,7 @@ import 'screens/home_screen.dart';
 import 'screens/create_donation_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/admin_dashboard.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -49,6 +50,7 @@ class MyApp extends StatelessWidget {
         '/doar': (_) => const CreateDonationScreen(),
         '/dashboard': (_) => const DashboardScreen(),
         '/profile': (_) => const ProfileScreen(),
+        '/admin-dashboard': (_) => const AdminDashboardScreen(),
       },
 
       onGenerateRoute: (RouteSettings settings) {
