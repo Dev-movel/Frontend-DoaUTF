@@ -35,17 +35,27 @@ class AuthService {
       '/auth/login',
       data: {'email': email, 'password': password},
     );
- 
-    final tokens = AuthTokens.fromJson(response.data!);
-    await TokenStorage.instance.saveTokens(
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    );
+
     final data = response.data!;
     debugPrint('Resposta completa do backend: $data');
+    
     final bool isAdmin = data['isAdmin'] ?? false;
-    await TokenStorage.instance.saveIsAdmin(isAdmin);
-    return isAdmin;//retornando a flag isAdmin, para redirecionar o admin para a homePage dos admins
+
+    try {
+      final tokens = AuthTokens.fromJson(data);
+      
+      await TokenStorage.instance.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+      
+      await TokenStorage.instance.saveIsAdmin(isAdmin);
+      
+    } catch (e) {
+      debugPrint('Erro ao persistir tokens: $e');
+    }
+
+    return isAdmin; 
   }
 
   Future<bool> register({

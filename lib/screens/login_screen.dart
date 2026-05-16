@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 
 import '../auth/services/auth_service.dart';
 import '../widgets/auth_modal_container.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+const LoginScreen({Key? key}) : super(key: key);
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -28,36 +27,42 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
+  final email = _emailController.text.trim();
+  final password = _passwordController.text;
 
-    if (email.isEmpty || password.isEmpty) {
-      _showError('Preencha e-mail e senha.');
-      return;
+  if (email.isEmpty || password.isEmpty) {
+    _showError('Preencha e-mail e senha.');
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    final bool isAdmin = await AuthService.instance.login(
+      email: email,
+      password: password,
+    );
+
+    if (!mounted) return;
+
+    if (isAdmin) {
+      debugPrint('Usuário é Admin. Redirecionando para Dashboard Admin...');
+      Navigator.pushReplacementNamed(context, '/admin-dashboard');
+    } else {
+      debugPrint('Usuário comum. Redirecionando para Dashboard...');
+      Navigator.pushReplacementNamed(context, '/dashboard');
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      debugPrint('Tentando login com: $email');
-
-      await AuthService.instance.login(
-        email: email,
-        password: password,
-      );
-
-      if (!mounted) return;
-
-      Navigator.pushReplacementNamed(context, '/home');
     } on DioException catch (e) {
       if (mounted) {
         _showError(_friendlyError(e));
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
+        debugPrint('Erro no login: $e');
         _showError('Erro inesperado. Tente novamente.');
       }
     } finally {
