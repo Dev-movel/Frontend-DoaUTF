@@ -87,7 +87,7 @@ class _FeedScreenState extends State<FeedScreen> {
     } catch (_) {
       if (mounted && reiniciar) {
         setState(() {
-          _itens = FeedService.itensMock;
+          _itens = [];
           _temMaisPaginas = false;
         });
       }
