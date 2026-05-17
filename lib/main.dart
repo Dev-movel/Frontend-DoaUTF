@@ -9,6 +9,7 @@ import 'screens/reset_password_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/create_donation_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/feed_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/admin_dashboard.dart';
 
@@ -51,6 +52,7 @@ class MyApp extends StatelessWidget {
         '/dashboard': (_) => const DashboardScreen(),
         '/profile': (_) => const ProfileScreen(),
         '/admin-dashboard': (_) => const AdminDashboardScreen(),
+        '/feed': (_) => const FeedScreen(),
       },
 
       onGenerateRoute: (RouteSettings settings) {
