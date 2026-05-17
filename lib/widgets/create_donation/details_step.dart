@@ -19,6 +19,7 @@ class DetailsStep extends StatelessWidget {
   final TextEditingController descCtrl;
   final int? selectedCategoriaId;
   final String selectedConservation;
+  final bool showErrors;
   final VoidCallback onRetry;
   final ValueChanged<int> onCategorySelected;
   final ValueChanged<String> onConservationChanged;
@@ -33,6 +34,7 @@ class DetailsStep extends StatelessWidget {
     required this.descCtrl,
     required this.selectedCategoriaId,
     required this.selectedConservation,
+    this.showErrors = false,
     required this.onRetry,
     required this.onCategorySelected,
     required this.onConservationChanged,
@@ -103,8 +105,19 @@ class DetailsStep extends StatelessWidget {
           _CategorySearchField(
             items: categorias,
             selected: selected,
+            hasError: showErrors && selectedCategoriaId == null,
             onSelected: (cat) => onCategorySelected(cat.id),
           ),
+          if (showErrors && selectedCategoriaId == null) ...[
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: Text(
+                'Selecione uma categoria',
+                style: GoogleFonts.manrope(fontSize: 11, color: Colors.redAccent),
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           const FieldLabel('Estado do Item'),
           const SizedBox(height: 8),
@@ -119,6 +132,16 @@ class DetailsStep extends StatelessWidget {
                     ))
                 .toList(),
           ),
+          if (showErrors && selectedConservation.isEmpty) ...[
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 4),
+              child: Text(
+                'Selecione o estado de conservação',
+                style: GoogleFonts.manrope(fontSize: 11, color: Colors.redAccent),
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           const FieldLabel('Descrição'),
           const SizedBox(height: 8),
@@ -139,12 +162,14 @@ class DetailsStep extends StatelessWidget {
 class _CategorySearchField extends StatefulWidget {
   final List<CategoriaItem> items;
   final CategoriaItem? selected;
+  final bool hasError;
   final ValueChanged<CategoriaItem> onSelected;
 
   const _CategorySearchField({
     required this.items,
     required this.selected,
     required this.onSelected,
+    this.hasError = false,
   });
 
   @override
@@ -206,11 +231,14 @@ class _CategorySearchFieldState extends State<_CategorySearchField> {
                 borderSide: BorderSide.none),
             enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none),
+                borderSide: widget.hasError
+                    ? const BorderSide(color: Colors.redAccent, width: 1.5)
+                    : BorderSide.none),
             focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide:
-                    const BorderSide(color: AppColors.primary, width: 1.5)),
+                borderSide: widget.hasError
+                    ? const BorderSide(color: Colors.redAccent, width: 1.5)
+                    : const BorderSide(color: AppColors.primary, width: 1.5)),
           ),
         ),
         if (_showList && _filtered.isNotEmpty)
