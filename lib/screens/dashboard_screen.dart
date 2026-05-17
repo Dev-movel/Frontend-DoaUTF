@@ -126,6 +126,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pedidosAtivos = _minhasDoacoes.where((doacao) => _isOrderStatus(doacao.status)).toList();
+    final atividadesRecentes = _minhasDoacoes.take(2).toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const MainAppBar(activeRoute: '/dashboard'),
@@ -162,8 +165,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   runSpacing: 24,
                   children: [
                     _buildStatCard('${_minhasDoacoes.length}', 'ITENS DOADOS', Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth),
-                    _buildStatCard('12', 'ITENS RECEBIDOS', Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth),
-                    _buildStatCard('942', 'PONTUAÇÃO DE SUSTENTABILIDADE', Icons.eco_outlined, AppColors.surface, AppColors.onSurface, cardWidth),
+                    _buildStatCard('${_countReceivedDonations()}', 'ITENS RECEBIDOS', Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth),
+                    _buildStatCard('${_countActiveDonations()}', 'DOAÇÕES ATIVAS', Icons.eco_outlined, AppColors.surface, AppColors.onSurface, cardWidth),
                   ],
                 );
               }
@@ -185,19 +188,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       else
                         ..._minhasDoacoes.map((doacao) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildDonationCard(
-                            doacao.titulo,
-                            'Status atual: ${doacao.status}',
-                            doacao.status.toUpperCase(),
-                            _getStatusColor(doacao.status),
-                          ),
+                          child: _buildDonationCard(doacao),
                         )),
                       const SizedBox(height: 32),
                       _buildSectionHeader('Meus Pedidos'),
                       const SizedBox(height: 16),
-                      _buildOrderItem('Cafeteira Prensa Francesa', 'Solicitado de Sarah J. • a 2km', 'Aprovado', Colors.green),
-                      const Divider(),
-                      _buildOrderItem('Coleção de Literatura Clássica', 'Solicitado de Biblioteca Verde • a 5km', 'Pendente', Colors.grey),
+                      if (pedidosAtivos.isEmpty)
+                        const Text('Nenhum pedido ativo no momento.', style: TextStyle(color: AppColors.outline))
+                      else
+                        ...pedidosAtivos.take(2).map((pedido) => _buildOrderItem(
+                          pedido.titulo,
+                          'Status: ${pedido.status}',
+                          pedido.status.toUpperCase(),
+                          _getStatusColor(pedido.status),
+                        )),
                     ],
                   ),
                 ),
@@ -219,8 +223,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ]),
                         const SizedBox(height: 24),
                         _buildSidebarCard('Atividade Recente', [
-                          _buildActivityItem('Avaliação Concluída', 'Sua doação de "Luvas de Forno" foi verificada', 'HÁ 2 HORAS', Colors.green),
-                          _buildActivityItem('Ganhou o Selo Guardião da Terra', 'Completou 10 doações bem-sucedidas este mês', 'ONTEM', Colors.blue),
+                          if (atividadesRecentes.isEmpty) ...[
+                            const Text('Nenhuma atividade recente disponível.', style: TextStyle(color: AppColors.outline)),
+                          ] else ...atividadesRecentes.map((doacao) => _buildActivityItem(
+                            'Atualização de doação',
+                            'Sua doação "${doacao.titulo}" está ${doacao.status.toLowerCase()}',
+                            'RECENTE',
+                            _getStatusColor(doacao.status),
+                          )),
                         ]),
                       ],
                     ),
@@ -267,27 +277,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (normalized.contains('aguardando') || normalized.contains('pendente')) {
       return Colors.orange.shade100;
     }
-    if (normalized.contains('anunciado') || normalized.contains('aprovado') || normalized.contains('concluído') || normalized.contains('concluido')) {
+    if (normalized.contains('anunciado') || normalized.contains('aprovado') || normalized.contains('concluído') || normalized.contains('concluido') || normalized.contains('recebido') || normalized.contains('entreg')) {
       return Colors.green.shade100;
     }
     return AppColors.containerHigh;
   }
 
-  Widget _buildDonationCard(String title, String subtitle, String tag, Color tagBg) {
+  int _countReceivedDonations() {
+    return _minhasDoacoes.where((doacao) {
+      final status = doacao.status.toLowerCase();
+      return status.contains('receb') || status.contains('entreg') || status.contains('conclu') || status.contains('finaliz');
+    }).length;
+  }
+
+  int _countActiveDonations() {
+    return _minhasDoacoes.where((doacao) {
+      final status = doacao.status.toLowerCase();
+      return status.contains('pendente') || status.contains('aguardando') || status.contains('anunciado') || status.contains('aprovado');
+    }).length;
+  }
+
+  bool _isOrderStatus(String status) {
+    final normalized = status.toLowerCase();
+    return normalized.contains('pendente') || normalized.contains('aguardando') || normalized.contains('anunciado') || normalized.contains('aprovado');
+  }
+
+  Widget _buildDonationCard(Doacao doacao) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          Container(width: 60, height: 60, decoration: BoxDecoration(color: AppColors.containerHigh, borderRadius: BorderRadius.circular(8))),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: doacao.fotoUrl != null && doacao.fotoUrl!.isNotEmpty
+                ? Image.network(
+                    doacao.fotoUrl!,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 60,
+                      height: 60,
+                      color: AppColors.containerHigh,
+                      child: const Icon(Icons.volunteer_activism, color: Colors.white),
+                    ),
+                  )
+                : Container(
+                    width: 60,
+                    height: 60,
+                    color: AppColors.containerHigh,
+                    child: const Icon(Icons.volunteer_activism, color: Colors.white),
+                  ),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: tagBg, borderRadius: BorderRadius.circular(4)),
-                child: Text(tag, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(color: _getStatusColor(doacao.status), borderRadius: BorderRadius.circular(4)),
+                child: Text(doacao.status.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 8),
+              Text(doacao.titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.outline)),
+              Text('Status atual: ${doacao.status}', style: const TextStyle(fontSize: 12, color: AppColors.outline)),
             ]),
           )
         ],
