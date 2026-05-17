@@ -28,6 +28,7 @@ class CreateDonationScreen extends StatefulWidget {
 class _CreateDonationScreenState extends State<CreateDonationScreen> {
   int  _step      = 0;
   bool _isLoading = false;
+  bool _detailsAttempted = false;
 
   List<CategoriaItem> _categorias  = [];
   bool                _loadingCats = true;
@@ -84,15 +85,22 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
       _titleCtrl.text.trim().isNotEmpty &&
       _descCtrl.text.trim().isNotEmpty &&
       _form.categoriaId != null &&
+      _form.estadoConservacao.isNotEmpty &&
+      _form.tipoLogistica.isNotEmpty &&
       _form.localRetirada.isNotEmpty;
 
   // ── Validações ─────────────────────────────────────────────────────────────
 
   bool _validateDetails() {
+    setState(() => _detailsAttempted = true);
     final formValid = _formKey.currentState?.validate() ?? false;
     if (!formValid) return false;
     if (_form.categoriaId == null) {
       _showError('Selecione uma categoria.');
+      return false;
+    }
+    if (_form.estadoConservacao.isEmpty) {
+      _showError('Selecione o estado de conservação do item.');
       return false;
     }
     return true;
@@ -107,6 +115,10 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
   }
 
   bool _validateLogistics() {
+    if (_form.tipoLogistica.isEmpty) {
+      _showError('Selecione o tipo de entrega: Retirada Disponível ou Ponto de Encontro.');
+      return false;
+    }
     if (_form.localRetirada.isEmpty) {
       _showError('Selecione um local de retirada ou ponto de encontro.');
       return false;
@@ -242,7 +254,18 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
     }
   }
 
+  static const _allowedMimes = {'image/jpeg', 'image/jpg', 'image/png'};
+  static const _allowedExts = {'.jpg', '.jpeg', '.png'};
+
   Future<bool> _checkSize(XFile xfile) async {
+    final mime = xfile.mimeType?.toLowerCase() ?? '';
+    final ext  = xfile.name.toLowerCase();
+    final formatOk = _allowedMimes.contains(mime) ||
+        _allowedExts.any((e) => ext.endsWith(e));
+    if (!formatOk) {
+      _showError('Apenas fotos JPG ou PNG são aceitas.');
+      return false;
+    }
     final bytes = await xfile.length();
     if (bytes > _kMaxImageBytes) {
       _showError('A foto ultrapassa o limite de 5 MB e não foi adicionada.');
@@ -390,6 +413,7 @@ class _CreateDonationScreenState extends State<CreateDonationScreen> {
         descCtrl: _descCtrl,
         selectedCategoriaId: _form.categoriaId,
         selectedConservation: _form.estadoConservacao,
+        showErrors: _detailsAttempted,
         onRetry: () => setState(() {
           _loadingCats = true;
           _catsError = null;
