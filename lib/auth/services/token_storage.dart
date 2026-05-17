@@ -10,10 +10,17 @@ class TokenStorage {
 
   static const _keyAccess  = 'access_token';
   static const _keyRefresh = 'refresh_token';
-  static const _keyIsAdmin = 'is_admin'; 
+  static const _keyIsAdmin = 'is_admin';
 
-  Future<String?> getAccessToken()  => _storage.read(key: _keyAccess);
-  Future<String?> getRefreshToken() => _storage.read(key: _keyRefresh);
+  // Cache em memória para evitar latência do FlutterSecureStorage na primeira escrita
+  String? _cachedAccessToken;
+  String? _cachedRefreshToken;
+
+  Future<String?> getAccessToken() async =>
+      _cachedAccessToken ?? await _storage.read(key: _keyAccess);
+
+  Future<String?> getRefreshToken() async =>
+      _cachedRefreshToken ?? await _storage.read(key: _keyRefresh);
 
   Future<bool> hasTokens() async {
     final access = await getAccessToken();
@@ -24,20 +31,26 @@ class TokenStorage {
     required String accessToken,
     required String refreshToken,
   }) async {
+    _cachedAccessToken  = accessToken;
+    _cachedRefreshToken = refreshToken;
     await Future.wait([
       _storage.write(key: _keyAccess,  value: accessToken),
       _storage.write(key: _keyRefresh, value: refreshToken),
     ]);
   }
 
-  Future<void> updateAccessToken(String accessToken) =>
-      _storage.write(key: _keyAccess, value: accessToken);
+  Future<void> updateAccessToken(String accessToken) {
+    _cachedAccessToken = accessToken;
+    return _storage.write(key: _keyAccess, value: accessToken);
+  }
 
   Future<void> clearTokens() async {
+    _cachedAccessToken  = null;
+    _cachedRefreshToken = null;
     await Future.wait([
       _storage.delete(key: _keyAccess),
       _storage.delete(key: _keyRefresh),
-      _storage.delete(key: _keyIsAdmin), 
+      _storage.delete(key: _keyIsAdmin),
     ]);
   }
 
