@@ -42,7 +42,7 @@ class DatePickerField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(
-            color: AppColors.primary.withValues(alpha: 0.4),
+            color: AppColors.primary.withOpacity(0.4),
             width: 2,
           ),
         ),

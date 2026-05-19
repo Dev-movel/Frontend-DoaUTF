@@ -34,12 +34,12 @@ class PasswordHint extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.outline.withValues(alpha: 0.05),
+          color: AppColors.outline.withOpacity(0.05),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: _isValid
-                ? AppColors.primary.withValues(alpha: 0.3)
-                : AppColors.outline.withValues(alpha: 0.15),
+                ? AppColors.primary.withOpacity(0.3)
+                : AppColors.outline.withOpacity(0.15),
           ),
         ),
         child: Column(
@@ -53,7 +53,7 @@ class PasswordHint extends StatelessWidget {
                 Expanded(
                   child: Container(
                     height: 1,
-                    color: AppColors.outline.withValues(alpha: 0.12),
+                    color: AppColors.outline.withOpacity(0.12),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -71,7 +71,7 @@ class PasswordHint extends StatelessWidget {
                 Expanded(
                   child: Container(
                     height: 1,
-                    color: AppColors.outline.withValues(alpha: 0.12),
+                    color: AppColors.outline.withOpacity(0.12),
                   ),
                 ),
               ],
