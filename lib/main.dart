@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'auth/services/api_client.dart';
 import 'auth/services/token_storage.dart';
 
@@ -18,6 +20,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await initializeDateFormatting('pt_BR');
+  Intl.defaultLocale = 'pt_BR';
+
   ApiClient.init(
     navigatorKey: navigatorKey,
     baseUrl: 'http://localhost:3000',
@@ -25,7 +30,7 @@ Future<void> main() async {
 
   final hasSession = await TokenStorage.instance.hasTokens();
 
-runApp(const MyApp(initialRoute: '/home'));
+  runApp(const MyApp(initialRoute: '/home'));
 }
 
 class MyApp extends StatelessWidget {

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../auth/services/token_storage.dart';
 import '../models/feed_item.dart';
 
 class FeedService {
@@ -18,6 +19,7 @@ class FeedService {
     int pagina = 1,
   }) async {
     try {
+      final token = await TokenStorage.instance.getAccessToken();
       final response = await _dio.get(
         '/itens',
         queryParameters: {
@@ -25,6 +27,7 @@ class FeedService {
           if (busca != null && busca.isNotEmpty) 'busca': busca,
           'pagina': pagina,
         },
+        options: token == null ? null : Options(headers: {'Authorization': 'Bearer $token'}),
       );
       final list = response.data as List<dynamic>;
       return list
