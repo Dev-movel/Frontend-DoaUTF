@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 
 class TokenStorage {
   TokenStorage._();
@@ -6,6 +7,10 @@ class TokenStorage {
 
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    webOptions: WebOptions(
+      dbName: 'doautf_auth', 
+      publicKey: 'auth_key_static',
+    ),
   );
 
   static const _keyAccess  = 'access_token';
@@ -55,11 +60,25 @@ class TokenStorage {
   }
 
   Future<void> saveIsAdmin(bool isAdmin) async {
-    await _storage.write(key: _keyIsAdmin, value: isAdmin.toString());
+    _memIsAdmin = isAdmin;
+    try {
+      await _storage.write(key: _keyIsAdmin, value: isAdmin.toString());
+    } catch (e) {}
   }
 
-  Future<bool> getIsAdmin() async {
-    final value = await _storage.read(key: _keyIsAdmin);
-    return value == 'true';
+  Future<void> clearTokens() async {
+    _memAccess = null;
+    _memRefresh = null;
+    _memIsAdmin = null;
+
+    try {
+      await Future.wait([
+        _storage.delete(key: _keyAccess),
+        _storage.delete(key: _keyRefresh),
+        _storage.delete(key: _keyIsAdmin), 
+      ]);
+    } catch (e) {
+      debugPrint('Aviso Storage Web: Erro ao limpar disco.');
+    }
   }
 }
