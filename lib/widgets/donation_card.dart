@@ -6,7 +6,7 @@ import 'status_badge.dart';
 class DonationCard extends StatelessWidget {
   final Doacao doacao;
 
-  const DonationCard({Key? key, required this.doacao}) : super(key: key);
+  const DonationCard({super.key, required this.doacao});
 
   @override
   Widget build(BuildContext context) {

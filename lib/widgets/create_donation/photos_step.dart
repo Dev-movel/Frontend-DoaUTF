@@ -113,7 +113,7 @@ class _AddMoreBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: _DashedBox(
-        borderColor: _kDashedBd.withValues(alpha: 0.5),
+        borderColor: _kDashedBd.withOpacity(0.5),
         bgColor: _kSurface,
         height: double.infinity,
         child: const Icon(Icons.add, size: 22, color: AppColors.outline),
@@ -212,7 +212,7 @@ class _PhotoThumbnail extends StatelessWidget {
               width: 22,
               height: 22,
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
+                color: Colors.black.withOpacity(0.55),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.close_rounded,

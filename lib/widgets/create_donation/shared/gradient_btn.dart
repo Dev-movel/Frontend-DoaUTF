@@ -55,7 +55,7 @@ class _GradientBtnState extends State<GradientBtn> {
             boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.22),
+                      color: AppColors.primary.withOpacity(0.22),
                       blurRadius: 18,
                       offset: const Offset(0, 6),
                     ),

@@ -3,9 +3,11 @@ import '../theme/app_colors.dart';
 import '../services/usuario_service.dart';
 import '../widgets/main_app_bar.dart';
 import 'agendamento_screen.dart'; 
+import '../models/usuario.dart';
+import '../models/doacao.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -13,7 +15,15 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
+  Usuario? _usuario;
   String _nomeUsuario = 'Usuário';
+  List<Doacao> _minhasDoacoes = [];
+  int _itensRecebidos = 0;
+  List<dynamic> _meusAgendamentos = [];
+  Map<int, String?> _receivedFotos = {};
+  bool _expandedDoacoes = false;
+  bool _expandedPedidos = false;
+  static const int _itemsPerPage = 4;
 
   @override
   void initState() {
@@ -24,8 +34,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _carregarDados() async {
     setState(() => _isLoading = true);
     try {
+      setState(() {
+        _minhasDoacoes = [];
+        _itensRecebidos = 0;
+        _meusAgendamentos = [];
+        _receivedFotos = {};
+      });
+
       final user = await UsuarioService.instance.getMe();
-      if (mounted) setState(() => _nomeUsuario = user.nome);
+      final donations = await UsuarioService.instance.getMyDonations();
+      final received = await UsuarioService.instance.getReceivedDonations();
+      final agendamentos = await UsuarioService.instance.getMyAgendamentos();
+
+      final Map<int, String?> fotoMap = {};
+      for (final d in received) {
+        fotoMap[d.id] = d.fotoUrl;
+      }
+
+      setState(() {
+        _usuario = user;
+        _nomeUsuario = user.nome.isNotEmpty ? user.nome : 'Usuário';
+        _minhasDoacoes = donations;
+        _itensRecebidos = received.length;
+        _meusAgendamentos = agendamentos;
+        _receivedFotos = fotoMap;
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -37,98 +70,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _abrirInjetorDeTeste() {
-    final TextEditingController itemController = TextEditingController();
-    final TextEditingController userController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: const [
-            Icon(Icons.bug_report, color: Colors.red),
-            SizedBox(width: 8),
-            Text('Injetor de Teste'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Insira os IDs para abrir a tela de agendamento diretamente:',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: itemController,
-              decoration: const InputDecoration(
-                labelText: 'ID do Item (item_id)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.inventory_2_outlined),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: userController,
-              decoration: const InputDecoration(
-                labelText: 'Seu ID de Usuário (usuarioIdAtual)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person_outline),
-              ),
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              final itemId = int.tryParse(itemController.text);
-              final usuarioId = int.tryParse(userController.text);
-
-              if (itemId == null || usuarioId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Por favor, insira IDs válidos!'), backgroundColor: Colors.orange),
-                );
-                return;
-              }
-
-              Navigator.pop(context); 
-              
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AgendamentoScreen(
-                    itemId: itemId,
-                    usuarioIdAtual: usuarioId,
-                  ),
-                ),
-              );
-            },
-            child: const Text('Abrir Tela', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final pedidosAtivos = _minhasDoacoes.where((doacao) => _isOrderStatus(doacao.status)).toList();
+    final currentUserId = _usuario?.id;
+    final pedidosConcluidos = _meusAgendamentos.where((a) {
+      if (currentUserId == null) return false;
+      final status = (a['status'] ?? '').toString().toLowerCase();
+      final rawReceptorId = a['receptor_id'] ?? a['receptorId'];
+      final receptorId = rawReceptorId is int ? rawReceptorId : int.tryParse(rawReceptorId?.toString() ?? '');
+      return status == 'concluido' && receptorId == currentUserId;
+    }).toList();
+    final atividadesRecentes = pedidosConcluidos.reversed.take(4).toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const MainAppBar(activeRoute: '/dashboard'),
-      
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.red,
-        onPressed: _abrirInjetorDeTeste,
-        child: const Icon(Icons.bug_report, color: Colors.white),
-      ),
-      
+            
       body: _isLoading
         ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
         : SingleChildScrollView(
@@ -136,17 +94,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Bem-vindo de volta, $_nomeUsuario.',
-                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.onSurface)
-                ),
-                const Text(
-                  'Sua jornada de sustentabilidade está fazendo uma diferença real na comunidade.',
-                  style: TextStyle(fontSize: 16, color: AppColors.onSurfaceVariant)
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: AppColors.primary,
+                      child: Text(
+                        _usuario?.nome.isNotEmpty == true ? _usuario!.nome[0].toUpperCase() : 'U',
+                        style: const TextStyle(fontSize: 24, color: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Bem-vindo de volta, $_nomeUsuario.',
+                            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Sua jornada de sustentabilidade está fazendo uma diferença real na comunidade.',
+                            style: TextStyle(fontSize: 16, color: AppColors.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 32),
 
-            // Layout Responsivo (Estatísticas)
             LayoutBuilder(
               builder: (context, constraints) {
                 double cardWidth = (constraints.maxWidth - 48) / (constraints.maxWidth > 800 ? 3 : 1);
@@ -154,16 +132,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   spacing: 24,
                   runSpacing: 24,
                   children: [
-                    _buildStatCard('24', 'ITENS DOADOS', Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth),
-                    _buildStatCard('12', 'ITENS RECEBIDOS', Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth),
-                    _buildStatCard('942', 'PONTUAÇÃO DE SUSTENTABILIDADE', Icons.eco_outlined, AppColors.surface, AppColors.onSurface, cardWidth),
+                    _buildStatCard('${_minhasDoacoes.length}', 'ITENS DOADOS', Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth),
+                    _buildStatCard('$_itensRecebidos', 'ITENS RECEBIDOS', Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth),
+                    // Pontuação de sustentabilidade: mantida sempre em 0 por decisão do time
+                    _buildStatCard('0', 'PONTUAÇÃO DE SUSTENTABILIDADE', Icons.eco_outlined, AppColors.surface, AppColors.onSurface, cardWidth),
                   ],
                 );
               }
             ),
             const SizedBox(height: 48),
 
-            // Área Principal e Sidebar
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -171,18 +149,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   flex: 2,
                   child: Column(
                     children: [
-                      _buildSectionHeader('Minhas Doações Atuais'),
+                      _buildSectionHeader(
+                        'Minhas Doações Atuais',
+                        onViewAll: () => setState(() => _expandedDoacoes = !_expandedDoacoes),
+                        isExpanded: _expandedDoacoes,
+                        itemCount: _minhasDoacoes.length,
+                      ),
                       const SizedBox(height: 16),
-                      _buildDonationCard('Relógio Seiko Vintage', 'Retirada agendada para amanhã, 14h', 'AGUARDANDO RETIRADA', Colors.orange.shade100),
-                      const SizedBox(height: 12),
-                      _buildDonationCard('Tênis Esportivo Vermelho', '2 pedidos ativos pendentes', 'ANUNCIADO', Colors.green.shade100),
-                      
+                      if (_minhasDoacoes.isEmpty)
+                        const Text('Ainda não há doações ativas.', style: TextStyle(color: AppColors.outline))
+                      else
+                        ...(_expandedDoacoes ? _minhasDoacoes : _minhasDoacoes.take(_itemsPerPage)).map((doacao) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildDonationCard(doacao),
+                        )),
                       const SizedBox(height: 32),
-                      _buildSectionHeader('Meus Pedidos'),
+                      _buildSectionHeader(
+                        'Meus Pedidos',
+                        onViewAll: () => setState(() => _expandedPedidos = !_expandedPedidos),
+                        isExpanded: _expandedPedidos,
+                        itemCount: pedidosConcluidos.length,
+                      ),
                       const SizedBox(height: 16),
-                      _buildOrderItem('Cafeteira Prensa Francesa', 'Solicitado de Sarah J. • a 2km', 'Aprovado', Colors.green),
-                      const Divider(),
-                      _buildOrderItem('Coleção de Literatura Clássica', 'Solicitado de Biblioteca Verde • a 5km', 'Pendente', Colors.grey),
+                      if (pedidosConcluidos.isEmpty)
+                        const Text('Nenhum pedido ativo no momento.', style: TextStyle(color: AppColors.outline))
+                      else
+                        ...(_expandedPedidos ? pedidosConcluidos : pedidosConcluidos.take(_itemsPerPage)).map((ag) {
+                          final dynamic rawId = ag['item_id'] ?? ag['id'];
+                          final int? itemId = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+                          final foto = itemId != null ? _receivedFotos[itemId] : null;
+                          return _buildOrderItem(
+                            ag['item_titulo'] ?? 'Item',
+                            'Status: ${ag['status']}',
+                            (ag['status'] ?? '').toUpperCase(),
+                            _getStatusColor(ag['status'] ?? ''),
+                            fotoUrl: foto,
+                          );
+                        }),
                     ],
                   ),
                 ),
@@ -204,8 +207,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ]),
                         const SizedBox(height: 24),
                         _buildSidebarCard('Atividade Recente', [
-                          _buildActivityItem('Avaliação Concluída', 'Sua doação de "Luvas de Forno" foi verificada', 'HÁ 2 HORAS', Colors.green),
-                          _buildActivityItem('Ganhou o Selo Guardião da Terra', 'Completou 10 doações bem-sucedidas este mês', 'ONTEM', Colors.blue),
+                          if (atividadesRecentes.isEmpty) ...[
+                            const Text('Nenhuma atividade recente disponível.', style: TextStyle(color: AppColors.outline)),
+                          ] else ...atividadesRecentes.map((ag) => _buildActivityItem(
+                            'Atualização de doação',
+                            'Seu pedido "${ag['item_titulo']}" foi ${ag['status'].toString().toLowerCase()}',
+                            'RECENTE',
+                            _getStatusColor(ag['status'] ?? ''),
+                          )),
                         ]),
                       ],
                     ),
@@ -217,8 +226,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
-  // --- Widgets Auxiliares ---
 
   Widget _buildStatCard(String value, String label, IconData icon, Color bg, Color textCol, double width) {
     return Container(
@@ -237,31 +244,131 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, {VoidCallback? onViewAll, bool isExpanded = false, int itemCount = 0}) {
+    final hasMore = itemCount > _itemsPerPage;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        TextButton(onPressed: () {}, child: const Text('Ver Tudo', style: TextStyle(color: AppColors.primaryContainer))),
+        if (hasMore)
+          TextButton(
+            onPressed: onViewAll,
+            child: Text(
+              isExpanded ? 'Mostrar Menos' : 'Ver Tudo',
+              style: const TextStyle(color: AppColors.primaryContainer),
+            ),
+          ),
       ],
     );
   }
 
-  Widget _buildDonationCard(String title, String subtitle, String tag, Color tagBg) {
+  Color _getStatusColor(String status) {
+    final normalized = status.toLowerCase();
+
+    if (normalized.contains('doado') || normalized.contains('entreg') || normalized.contains('conclu')) {
+      return Colors.green.shade100; // Doado / Entregue / Concluído
+    }
+    if (normalized.contains('reserv') || normalized.contains('reservado')) {
+      return Colors.orange.shade100; // Reservado
+    }
+    if (normalized.contains('dispon') || normalized.contains('disponivel') || normalized.contains('disponível') || normalized.contains('anunciado')) {
+      return Colors.blue.shade100; // Disponível / Anunciado
+    }
+
+    if (normalized.contains('aguardando') || normalized.contains('pendente')) {
+      return Colors.orange.shade100;
+    }
+    if (normalized.contains('aprovado')) {
+      return Colors.green.shade100;
+    }
+
+    return AppColors.containerHigh;
+  }
+
+  Color _getStatusTextColor(String status) {
+    final normalized = status.toLowerCase();
+
+    if (normalized.contains('doado') || normalized.contains('entreg') || normalized.contains('conclu') || normalized.contains('aprovado')) {
+      return Colors.green.shade800;
+    }
+    if (normalized.contains('reserv') || normalized.contains('reservado') || normalized.contains('aguardando') || normalized.contains('pendente')) {
+      return Colors.orange.shade800;
+    }
+    if (normalized.contains('dispon') || normalized.contains('disponivel') || normalized.contains('disponível') || normalized.contains('anunciado')) {
+      return Colors.blue.shade800;
+    }
+
+    return AppColors.onSurface;
+  }
+
+  int _countReceivedDonations() {
+    return _minhasDoacoes.where((doacao) {
+      final status = doacao.status.toLowerCase();
+      return status.contains('receb') || status.contains('entreg') || status.contains('conclu') || status.contains('finaliz');
+    }).length;
+  }
+
+  int _countActiveDonations() {
+    return _minhasDoacoes.where((doacao) {
+      final status = doacao.status.toLowerCase();
+      return status.contains('pendente') || status.contains('aguardando') || status.contains('anunciado') || status.contains('aprovado');
+    }).length;
+  }
+
+  bool _isOrderStatus(String status) {
+    final normalized = status.toLowerCase();
+    return normalized.contains('pendente') || normalized.contains('aguardando') || normalized.contains('anunciado') || normalized.contains('aprovado');
+  }
+
+  Widget _buildDonationCard(Doacao doacao) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          Container(width: 60, height: 60, decoration: BoxDecoration(color: AppColors.containerHigh, borderRadius: BorderRadius.circular(8))),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: doacao.fotoUrl != null && doacao.fotoUrl!.isNotEmpty
+                ? Image.network(
+                    doacao.fotoUrl!,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 60,
+                      height: 60,
+                      color: AppColors.containerHigh,
+                      child: const Icon(Icons.volunteer_activism, color: Colors.white),
+                    ),
+                  )
+                : Container(
+                    width: 60,
+                    height: 60,
+                    color: AppColors.containerHigh,
+                    child: const Icon(Icons.volunteer_activism, color: Colors.white),
+                  ),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: tagBg, borderRadius: BorderRadius.circular(4)),
-                child: Text(tag, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(color: _getStatusColor(doacao.status), borderRadius: BorderRadius.circular(4)),
+                child: Text(doacao.status.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 8),
+              Text(doacao.titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.outline)),
+              Text('Status atual: ${doacao.status}', style: const TextStyle(fontSize: 12, color: AppColors.outline)),
+              const SizedBox(height: 8),
+              // Pontuação de sustentabilidade: manter sempre 0 por decisão de implementação futura
+              Row(
+                children: const [
+                  Icon(Icons.eco_outlined, size: 14, color: AppColors.outline),
+                  SizedBox(width: 8),
+                  Text('Pontuação de sustentabilidade: 0', style: TextStyle(fontSize: 12, color: AppColors.outline)),
+                ],
+              ),
             ]),
           )
         ],
@@ -269,13 +376,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildOrderItem(String title, String info, String status, Color statusCol) {
+  Widget _buildOrderItem(String title, String info, String status, Color statusCol, {String? fotoUrl}) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(backgroundColor: AppColors.containerHigh, child: const Icon(Icons.shopping_bag_outlined)),
+      leading: fotoUrl != null
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              fotoUrl,
+              width: 44,
+              height: 44,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stack) => CircleAvatar(backgroundColor: AppColors.containerHigh, child: const Icon(Icons.shopping_bag_outlined)),
+            ),
+          )
+        : CircleAvatar(backgroundColor: AppColors.containerHigh, child: const Icon(Icons.shopping_bag_outlined)),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(info),
-      trailing: Text(status, style: TextStyle(color: statusCol, fontWeight: FontWeight.bold)),
+      trailing: Text(status, style: TextStyle(color: _getStatusTextColor(status), fontWeight: FontWeight.bold)),
     );
   }
 
@@ -317,7 +435,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           Text(desc, style: const TextStyle(fontSize: 11, color: AppColors.outline)),
-          Text(time, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.outlineVariant)),
+          Text(time, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
         ])),
       ]),
     );
