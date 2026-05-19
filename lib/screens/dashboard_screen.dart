@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../services/usuario_service.dart';
-import '../models/usuario.dart';
+import '../widgets/main_app_bar.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -12,7 +12,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
-  Usuario? _usuario;
+  String _nomeUsuario = 'Usuário';
 
   @override
   void initState() {
@@ -24,9 +24,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await UsuarioService.instance.getMe();
-      setState(() {
-        _usuario = user;
-      });
+      if (mounted) setState(() => _nomeUsuario = user.nome);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -41,38 +39,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        title: const Text('DoaUTF', 
-          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pushNamed(context, '/home'), child: const Text('Home', style: TextStyle(color: AppColors.onSurface))),
-          TextButton(onPressed: () {}, child: const Text('Mapa', style: TextStyle(color: AppColors.onSurface))),
-          TextButton(onPressed: () => Navigator.pushNamed(context, '/doar'), child: const Text('Doar', style: TextStyle(color: AppColors.onSurface))),
-          TextButton(onPressed: () {}, child: const Text('Dashboard', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold))),
-          TextButton(
-            onPressed: () => Navigator.pushNamed(context, '/profile'), 
-            child: const Text('Perfil', style: TextStyle(color: AppColors.onSurface))
-          ),
-          const SizedBox(width: 20),
-          const Icon(Icons.notifications_none, color: AppColors.onSurface),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: () => Navigator.pushNamed(context, '/profile'),
-            child: CircleAvatar(
-              radius: 15, 
-              backgroundColor: AppColors.primary,
-              child: Text(
-                _usuario != null ? _usuario!.nome[0].toUpperCase() : '?',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ),
-          ),
-          const SizedBox(width: 20),
-        ],
-      ),
-      body: _isLoading 
+      appBar: const MainAppBar(activeRoute: '/dashboard'),
+      body: _isLoading
         ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
         : SingleChildScrollView(
             padding: const EdgeInsets.all(32.0),
@@ -80,7 +48,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Bem-vindo de volta, ${_usuario?.nome ?? "Usuário"}.', 
+                  'Bem-vindo de volta, $_nomeUsuario.',
                   style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.onSurface)
                 ),
                 const Text(

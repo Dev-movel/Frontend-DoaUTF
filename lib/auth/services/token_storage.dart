@@ -15,42 +15,17 @@ class TokenStorage {
 
   static const _keyAccess  = 'access_token';
   static const _keyRefresh = 'refresh_token';
-  static const _keyIsAdmin = 'is_admin'; 
+  static const _keyIsAdmin = 'is_admin';
 
-  String? _memAccess;
-  String? _memRefresh;
-  bool? _memIsAdmin;
+  // Cache em memória para evitar latência do FlutterSecureStorage na primeira escrita
+  String? _cachedAccessToken;
+  String? _cachedRefreshToken;
 
-  Future<String?> getAccessToken() async {
-    if (_memAccess != null) return _memAccess;
-    try {
-      _memAccess = await _storage.read(key: _keyAccess);
-      return _memAccess;
-    } catch (e) {
-      return null;
-    }
-  }
+  Future<String?> getAccessToken() async =>
+      _cachedAccessToken ?? await _storage.read(key: _keyAccess);
 
-  Future<String?> getRefreshToken() async {
-    if (_memRefresh != null) return _memRefresh;
-    try {
-      _memRefresh = await _storage.read(key: _keyRefresh);
-      return _memRefresh;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<bool> getIsAdmin() async {
-    if (_memIsAdmin != null) return _memIsAdmin!;
-    try {
-      final value = await _storage.read(key: _keyIsAdmin);
-      _memIsAdmin = value == 'true';
-      return _memIsAdmin!;
-    } catch (e) {
-      return false;
-    }
-  }
+  Future<String?> getRefreshToken() async =>
+      _cachedRefreshToken ?? await _storage.read(key: _keyRefresh);
 
   Future<bool> hasTokens() async {
     final access = await getAccessToken();
@@ -61,24 +36,27 @@ class TokenStorage {
     required String accessToken,
     required String refreshToken,
   }) async {
-    _memAccess = accessToken;
-    _memRefresh = refreshToken;
-
-    try {
-      await Future.wait([
-        _storage.write(key: _keyAccess,  value: accessToken),
-        _storage.write(key: _keyRefresh, value: refreshToken),
-      ]);
-    } catch (e) {
-      debugPrint('Aviso Storage Web: Não salvou no disco, mas está na memória.');
-    }
+    _cachedAccessToken  = accessToken;
+    _cachedRefreshToken = refreshToken;
+    await Future.wait([
+      _storage.write(key: _keyAccess,  value: accessToken),
+      _storage.write(key: _keyRefresh, value: refreshToken),
+    ]);
   }
 
-  Future<void> updateAccessToken(String accessToken) async {
-    _memAccess = accessToken;
-    try {
-      await _storage.write(key: _keyAccess, value: accessToken);
-    } catch (e) {}
+  Future<void> updateAccessToken(String accessToken) {
+    _cachedAccessToken = accessToken;
+    return _storage.write(key: _keyAccess, value: accessToken);
+  }
+
+  Future<void> clearTokens() async {
+    _cachedAccessToken  = null;
+    _cachedRefreshToken = null;
+    await Future.wait([
+      _storage.delete(key: _keyAccess),
+      _storage.delete(key: _keyRefresh),
+      _storage.delete(key: _keyIsAdmin),
+    ]);
   }
 
   Future<void> saveIsAdmin(bool isAdmin) async {
