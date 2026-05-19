@@ -6,7 +6,6 @@ import '../theme/app_colors.dart';
 import '../widgets/change_password_modal.dart';
 import '../widgets/donation_card.dart';
 import '../widgets/main_app_bar.dart';
-import '../widgets/debug/agendamento_test_fab.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -115,7 +114,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const MainAppBar(activeRoute: '/profile'),
-      floatingActionButton: const AgendamentoTestFAB(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : _usuario == null
@@ -154,7 +152,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       TextFormField(
                         initialValue: _usuario!.email,
                         readOnly: true,
-                        decoration: const InputDecoration(labelText: 'E-mail (Institucional)', filled: true, border: OutlineInputBorder()),
+                        style: const TextStyle(color: AppColors.outline),
+                        decoration: InputDecoration(
+                          labelText: 'E-mail (Institucional)',
+                          helperText: 'Não pode ser alterado',
+                          helperStyle: const TextStyle(color: AppColors.outline),
+                          filled: true,
+                          fillColor: AppColors.onSurface.withOpacity(0.06),
+                          border: const OutlineInputBorder(),
+                          disabledBorder: const OutlineInputBorder(
+                            borderSide: BorderSide(color: AppColors.outlineVariant),
+                          ),
+                          labelStyle: const TextStyle(color: AppColors.outline),
+                          suffixIcon: const Icon(Icons.lock_outline, color: AppColors.outline),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(

@@ -48,7 +48,7 @@ class _HeroText extends StatelessWidget {
           isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
       children: [
         Text(
-          'De vida nova ao\nque voce nao\nprecisa mais.',
+          'Dê nova vida ao\nque você não\nprecisa mais.',
           textAlign: isMobile ? TextAlign.center : TextAlign.left,
           style: AppTextStyles.hero.copyWith(
             fontSize: isMobile ? 42 : 64,
@@ -57,9 +57,9 @@ class _HeroText extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         Text(
-          'Uma rede logistica continua para a generosidade.\n'
+          'Uma rede logística contínua para a generosidade.\n'
           'Conecte-se com colegas, recicle itens e acompanhe\n'
-          'sua contribuicao ambiental em tempo real.',
+          'sua contribuição ambiental em tempo real.',
           textAlign: isMobile ? TextAlign.center : TextAlign.left,
           style: AppTextStyles.subtitle.copyWith(fontSize: 18, height: 1.6),
         ),
@@ -82,7 +82,7 @@ class _HeroText extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Comecar Agora'),
+              child: const Text('Começar Agora'),
             ),
             OutlinedButton(
               onPressed: () => ModalHelper.openLogin(context),
@@ -121,7 +121,7 @@ class _HeroImage extends StatelessWidget {
         height: isMobile ? 350 : 550,
         width: double.infinity,
         fit: BoxFit.cover,
-        semanticLabel: 'Pessoas colaborando em doacoes comunitarias',
+        semanticLabel: 'Pessoas colaborando em doações comunitárias',
         errorBuilder: (context, error, stackTrace) => Container(
           height: isMobile ? 350 : 550,
           decoration: BoxDecoration(

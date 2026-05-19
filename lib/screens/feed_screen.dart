@@ -11,7 +11,6 @@ import '../widgets/feed/feed_card.dart';
 import '../widgets/feed/feed_detail_modal.dart';
 import '../widgets/feed/feed_filters.dart';
 import '../widgets/feed/feed_header.dart';
-import '../widgets/debug/agendamento_test_fab.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -244,7 +243,6 @@ class _FeedScreenState extends State<FeedScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const MainAppBar(activeRoute: '/feed'),
-      floatingActionButton: const AgendamentoTestFAB(),
       body: CustomScrollView(
         slivers: [
           // Header e filtros scrollam junto com o conteúdo
