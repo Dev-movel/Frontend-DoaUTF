@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../services/usuario_service.dart';
 import '../widgets/main_app_bar.dart';
+import 'agendamento_screen.dart'; 
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -35,11 +36,99 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
+  void _abrirInjetorDeTeste() {
+    final TextEditingController itemController = TextEditingController();
+    final TextEditingController userController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.bug_report, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Injetor de Teste'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Insira os IDs para abrir a tela de agendamento diretamente:',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: itemController,
+              decoration: const InputDecoration(
+                labelText: 'ID do Item (item_id)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.inventory_2_outlined),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: userController,
+              decoration: const InputDecoration(
+                labelText: 'Seu ID de Usuário (usuarioIdAtual)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              final itemId = int.tryParse(itemController.text);
+              final usuarioId = int.tryParse(userController.text);
+
+              if (itemId == null || usuarioId == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Por favor, insira IDs válidos!'), backgroundColor: Colors.orange),
+                );
+                return;
+              }
+
+              Navigator.pop(context); 
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AgendamentoScreen(
+                    itemId: itemId,
+                    usuarioIdAtual: usuarioId,
+                  ),
+                ),
+              );
+            },
+            child: const Text('Abrir Tela', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const MainAppBar(activeRoute: '/dashboard'),
+      
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.red,
+        onPressed: _abrirInjetorDeTeste,
+        child: const Icon(Icons.bug_report, color: Colors.white),
+      ),
+      
       body: _isLoading
         ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
         : SingleChildScrollView(
@@ -78,7 +167,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Coluna da Esquerda: Doações e Pedidos
                 Expanded(
                   flex: 2,
                   child: Column(
@@ -101,7 +189,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 
                 const SizedBox(width: 48),
 
-                // Coluna da Direita (Sidebar): Links e Atividade
                 if (MediaQuery.of(context).size.width > 1000)
                   Expanded(
                     flex: 1,

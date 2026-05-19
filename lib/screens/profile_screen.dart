@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../widgets/change_password_modal.dart';
 import '../widgets/donation_card.dart';
 import '../widgets/main_app_bar.dart';
+import '../widgets/debug/agendamento_test_fab.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -114,6 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const MainAppBar(activeRoute: '/profile'),
+      floatingActionButton: const AgendamentoTestFAB(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : _usuario == null
