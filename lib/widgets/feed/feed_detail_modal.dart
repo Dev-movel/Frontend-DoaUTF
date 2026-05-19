@@ -4,12 +4,14 @@ import '../../services/solicitacao_service.dart';
 import '../../services/usuario_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
+import '../scheduling/agendamento_section.dart'; 
+import '../scheduling/gerenciador_solicitacoes.dart';
 
 class FeedDetailModal {
   FeedDetailModal._();
 
-  static void show(BuildContext context, FeedItem item) {
-    showDialog(
+  static Future<void> show(BuildContext context, FeedItem item) {
+    return showDialog(
       context: context,
       builder: (_) => _FeedDetailDialog(item: item, parentContext: context),
     );
@@ -37,13 +39,17 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
   int? _solicitacaoId;
   int? _meuId;
 
+  late String _currentStatus;
+
   FeedItem get item => widget.item;
 
   @override
   void initState() {
     super.initState();
     _solicitacaoId = item.solicitacaoId;
+    _currentStatus = item.status;
     _carregarMeuId();
+    _atualizarSolicitacaoAtiva();
   }
 
   Future<void> _carregarMeuId() async {
@@ -52,6 +58,18 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
       if (mounted) setState(() { _meuId = user.id; _carregandoUsuario = false; });
     } catch (_) {
       if (mounted) setState(() => _carregandoUsuario = false);
+    }
+  }
+
+  Future<void> _atualizarSolicitacaoAtiva() async {
+    try {
+      final solicitacoes = await SolicitacaoService.instance.buscarMinhasSolicitacoes();
+      if (!mounted) return;
+      setState(() {
+        _solicitacaoId = solicitacoes[item.id];
+      });
+    } catch (_) {
+      // ignora falha, manter o estado atual
     }
   }
 
@@ -103,6 +121,15 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
 
   @override
   Widget build(BuildContext context) {
+    if (_carregandoUsuario) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final int usuarioLogadoId = _meuId ?? 0;
+    final bool isDoador = usuarioLogadoId == item.doadorId;
+    final bool isDisponivel = _currentStatus.toLowerCase() == 'disponivel';
+    final bool isReservadoOuAgendado = _currentStatus.toLowerCase() == 'reservado' || _currentStatus.toLowerCase() == 'agendado';
+    
     return Dialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -123,7 +150,7 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                     children: [
                       _DoadorHeader(item: item, onClose: () => Navigator.of(context).pop()),
                       const SizedBox(height: 16),
-                      _Badges(categoria: item.categoria),
+                      _Badges(categoria: item.categoria, status: _currentStatus),
                       const SizedBox(height: 10),
                       Text(
                         item.titulo,
@@ -150,6 +177,35 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                               ? _cancelarSolicitacao
                               : _meInteressa,
                         ),
+                      
+                      if (isDoador && _currentStatus.toLowerCase() == 'disponivel') ...[
+                        const SizedBox(height: 24), 
+                        GerenciadorSolicitacoesWidget(
+                          itemId: item.id,
+                          onSolicitacaoAceita: () {
+                            setState(() {
+                              _currentStatus = 'reservado';
+                            });
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Solicitação aceita! O painel de agendamento foi liberado abaixo.'),
+                                backgroundColor: Color(0xFF0D631B),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+
+                      if (_currentStatus.toLowerCase() == 'reservado' || _currentStatus.toLowerCase() == 'agendado') ...[
+                        const SizedBox(height: 24),
+                        AgendamentoSection(
+                          itemId: item.id,
+                          itemStatus: _currentStatus,
+                          doadorId: item.doadorId ?? 0,
+                          usuarioId: usuarioLogadoId,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -359,7 +415,26 @@ class _DoadorHeader extends StatelessWidget {
 
 class _Badges extends StatelessWidget {
   final String categoria;
-  const _Badges({required this.categoria});
+  final String status;
+  const _Badges({required this.categoria, required this.status});
+
+  String get _label {
+    switch (status.toLowerCase()) {
+      case 'reservado': return 'RESERVADO';
+      case 'doado': return 'DOADO';
+      case 'agendado': return 'AGENDADO';
+      default: return 'DISPONÍVEL';
+    }
+  }
+
+  Color get _color {
+    switch (status.toLowerCase()) {
+      case 'reservado': return Colors.orange;
+      case 'doado': return Colors.grey;
+      case 'agendado': return const Color(0xFF0D631B);
+      default: return AppColors.primary;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -368,12 +443,12 @@ class _Badges extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: AppColors.primary,
+            color: _color,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
-            'DISPONÍVEL',
-            style: AppTextStyles.badge.copyWith(fontSize: 10),
+            _label,
+            style: AppTextStyles.badge.copyWith(fontSize: 10, color: Colors.white),
           ),
         ),
         const SizedBox(width: 8),

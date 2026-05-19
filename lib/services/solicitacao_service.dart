@@ -74,4 +74,38 @@ class SolicitacaoService {
       });
     }
   }
+
+Future<List<dynamic>> buscarSolicitacoesDoItem(int itemId) async {
+    try {
+      final token = await TokenStorage.instance.getAccessToken();
+      final response = await _dio.get(
+        '/itens/$itemId/solicitacoes',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.data as List<dynamic>;
+    } on DioException catch (e) {
+      debugPrint('❌ [GET /itens/$itemId/solicitacoes] ${e.response?.statusCode}');
+      throw SolicitacaoException('Não foi possível carregar a lista de interessados.');
+    }
+  }
+
+  Future<void> aceitarSolicitacao(int solicitacaoId) async {
+    try {
+      final token = await TokenStorage.instance.getAccessToken();
+      
+      await _dio.patch(
+        '/solicitacoes/$solicitacaoId/aceitar',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } on DioException catch (e) {
+      debugPrint('❌ [PATCH /solicitacoes/$solicitacaoId/aceitar] ${e.response?.statusCode} – ${e.response?.data}');
+      
+      throw SolicitacaoException(switch (e.response?.statusCode) {
+        401 => 'Sessão expirada. Faça login novamente.',
+        403 => 'Você não tem permissão para aceitar esta solicitação.',
+        404 => 'Solicitação não encontrada.',
+        _   => 'Erro ao aceitar solicitação. Tente novamente.',
+      });
+    }
+  }
 }
