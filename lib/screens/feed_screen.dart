@@ -25,6 +25,7 @@ class _FeedScreenState extends State<FeedScreen> {
   List<String> _filtros = ['Todos'];
   String _filtroSelecionado = 'Todos';
   final _buscaController = TextEditingController();
+  final _scrollController = ScrollController();
   int _pagina = 1;
   bool _temMaisPaginas = true;
   int? _usuarioAtualId;
@@ -44,6 +45,7 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void dispose() {
     _buscaController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -221,16 +223,22 @@ class _FeedScreenState extends State<FeedScreen> {
     }
   }
 
-  void _paginaAnterior() {
+  Future<void> _paginaAnterior() async {
     if (_pagina > 1) {
       _pagina--;
-      _carregarItens();
+      await _carregarItens();
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
     }
   }
 
-  void _proximaPagina() {
+  Future<void> _proximaPagina() async {
     _pagina++;
-    _carregarItens();
+    await _carregarItens();
+    if (mounted && _scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
   }
 
   @override
@@ -244,6 +252,7 @@ class _FeedScreenState extends State<FeedScreen> {
       backgroundColor: AppColors.background,
       appBar: const MainAppBar(activeRoute: '/feed'),
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           // Header e filtros scrollam junto com o conteúdo
           const SliverToBoxAdapter(child: FeedHeader()),
@@ -294,9 +303,15 @@ class _FeedScreenState extends State<FeedScreen> {
                     return FeedCard(
                       item: item,
                       onTap: () async {
+                        final savedOffset = _scrollController.hasClients
+                            ? _scrollController.offset
+                            : 0.0;
                         await FeedDetailModal.show(context, item);
                         if (mounted) {
-                          await _carregarItens(reiniciar: true);
+                          await _carregarItens();
+                          if (_scrollController.hasClients) {
+                            _scrollController.jumpTo(savedOffset);
+                          }
                         }
                       },
                       onAcceptDirect: canAcceptDirect ? () => _abrirAceitarSolicitacao(item) : null,
