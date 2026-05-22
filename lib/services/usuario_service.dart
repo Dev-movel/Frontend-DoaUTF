@@ -48,16 +48,25 @@ class UsuarioService {
     }
   }
 
-  Future<List<Doacao>> getMyDonations() async {
+  Future<List<Doacao>> getMyDonations({String? status}) async {
     try {
       final options = await _getAuthOptions();
-      final response = await _dio.get('/usuarios/me/donations', options: options);
+      
+      final Map<String, dynamic> queryParams = {};
+      if (status != null && status.isNotEmpty) {
+        queryParams['status'] = status;
+      }
+
+      final response = await _dio.get(
+        '/usuarios/me/donations',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        options: options,
+      );
 
       debugPrint('✅ [GET /usuarios/me/donations] Doações feitas: ${response.data}');
 
-      // Se a resposta vier paginada (ex: { "data": [...] }), mude para response.data['data']
-      final List<dynamic> data = response.data is Map ? response.data['data'] : response.data;
-      
+      final List<dynamic> data = response.data is Map ? response.data['data'] : response.data;      
+
       return data.map((json) => Doacao.fromJson(json)).toList();
     } on DioException catch (e) {
       debugPrint('❌ [GET /usuarios/me/donations] Erro: ${e.response?.data}');

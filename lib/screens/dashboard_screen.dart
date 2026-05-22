@@ -5,6 +5,7 @@ import '../widgets/main_app_bar.dart';
 import 'agendamento_screen.dart'; 
 import '../models/usuario.dart';
 import '../models/doacao.dart';
+import '../widgets/dashboard/status_filter_row.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,6 +25,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _expandedDoacoes = false;
   bool _expandedPedidos = false;
   static const int _itemsPerPage = 4;
+  String _statusSelecionado = 'Todos';
+  final List<String> _filtrosStatus = ['Todos', 'Disponíveis', 'Reservados', 'Doados'];
+  bool _isLoadingDoacoes = false;
+  int _totalItensDoadosContador = 0;
+
+  String? _mapearStatusParaApi(String filtro) {
+    switch (filtro) {
+      case 'Disponíveis': return 'disponivel';
+      case 'Reservados': return 'reservado';
+      case 'Doados': return 'doado';
+      default: return null;
+    }
+  }
+
+  Future<void> _filtrarDoacoes() async {
+    setState(() => _isLoadingDoacoes = true);
+    try {
+      final statusApi = _mapearStatusParaApi(_statusSelecionado);
+      final donations = await UsuarioService.instance.getMyDonations(status: statusApi);
+      setState(() {
+        _minhasDoacoes = donations;
+      });
+    } catch (e) {
+      debugPrint('Erro ao filtrar doações: $e');
+    } finally {
+      setState(() => _isLoadingDoacoes = false);
+    }
+  }
 
   @override
   void initState() {
@@ -42,7 +71,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
 
       final user = await UsuarioService.instance.getMe();
-      final donations = await UsuarioService.instance.getMyDonations();
+      final donations = await UsuarioService.instance.getMyDonations(
+        status: _mapearStatusParaApi(_statusSelecionado),
+      );
       final received = await UsuarioService.instance.getReceivedDonations();
       final agendamentos = await UsuarioService.instance.getMyAgendamentos();
 
@@ -55,6 +86,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _usuario = user;
         _nomeUsuario = user.nome.isNotEmpty ? user.nome : 'Usuário';
         _minhasDoacoes = donations;
+        
+        if (_statusSelecionado == 'Todos') {
+          _totalItensDoadosContador = donations.length;
+        }
+
         _itensRecebidos = received.length;
         _meusAgendamentos = agendamentos;
         _receivedFotos = fotoMap;
@@ -132,7 +168,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   spacing: 24,
                   runSpacing: 24,
                   children: [
-                    _buildStatCard('${_minhasDoacoes.length}', 'ITENS DOADOS', Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth),
+                    _buildStatCard('$_totalItensDoadosContador', 'ITENS DOADOS', Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth),
                     _buildStatCard('$_itensRecebidos', 'ITENS RECEBIDOS', Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth),
                     // Pontuação de sustentabilidade: mantida sempre em 0 por decisão do time
                     _buildStatCard('0', 'PONTUAÇÃO DE SUSTENTABILIDADE', Icons.eco_outlined, AppColors.surface, AppColors.onSurface, cardWidth),
@@ -156,8 +192,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         itemCount: _minhasDoacoes.length,
                       ),
                       const SizedBox(height: 16),
-                      if (_minhasDoacoes.isEmpty)
-                        const Text('Ainda não há doações ativas.', style: TextStyle(color: AppColors.outline))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: StatusFilterRow(
+                          filtros: _filtrosStatus,
+                          statusSelecionado: _statusSelecionado,
+                          onStatusChanged: (novoStatus) {
+                            setState(() {
+                              _statusSelecionado = novoStatus;
+                            });
+                            _filtrarDoacoes(); 
+                          },
+                        ),
+                      ),
+
+                      if (_isLoadingDoacoes)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_minhasDoacoes.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24.0),
+                            child: Column(
+                              children: [
+                                Icon(Icons.inbox_outlined, size: 48, color: AppColors.outline.withOpacity(0.5)),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Você não possui itens com este status no momento.',
+                                  style: TextStyle(color: AppColors.outline, fontSize: 14),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
                       else
                         ...(_expandedDoacoes ? _minhasDoacoes : _minhasDoacoes.take(_itemsPerPage)).map((doacao) => Padding(
                           padding: const EdgeInsets.only(bottom: 12),
