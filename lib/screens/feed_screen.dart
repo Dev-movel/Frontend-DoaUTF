@@ -30,7 +30,6 @@ class _FeedScreenState extends State<FeedScreen> {
   bool _temMaisPaginas = true;
   int? _usuarioAtualId;
 
-  static const _colunas = 3;
   static const _paddingH = 16.0;
   static const _espacamento = 12.0;
 
@@ -244,9 +243,10 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final colunas = screenWidth < 600 ? 1 : (screenWidth < 900 ? 2 : 3);
     final cardWidth =
-        (screenWidth - _paddingH * 2 - _espacamento * (_colunas - 1)) /
-        _colunas;
+        (screenWidth - _paddingH * 2 - _espacamento * (colunas - 1)) /
+        colunas;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -285,14 +285,14 @@ class _FeedScreenState extends State<FeedScreen> {
               ),
               sliver: SliverGrid(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: _colunas,
+                  crossAxisCount: colunas,
                   mainAxisSpacing: _espacamento,
                   crossAxisSpacing: _espacamento,
                   // imagem quadrada (cardWidth) + área de conteúdo abaixo
                   mainAxisExtent: cardWidth + 245,
                 ),
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) {
+                  (_, index) {
                     final item = _itens[index];
                     final statusLower = item.status.toLowerCase();
                     final isOwner = item.doadorId != null && item.doadorId == _usuarioAtualId;
