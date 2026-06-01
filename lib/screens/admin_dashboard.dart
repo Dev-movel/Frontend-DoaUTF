@@ -14,22 +14,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   late TabController _tabController;
   bool _isLoading = true;
 
+  // Controlador e string para a barra de pesquisa de usuários
+  final TextEditingController _searchController = TextEditingController();
+  String _filtroNome = '';
+
+  // Futures que vão buscar os dados reais da API
   late Future<List<dynamic>> _usuariosFuture;
-
-  final int doacoesConcluidas = 890; // Fixo por enquanto
-
-  List<Map<String, dynamic>> doacoesAtivas = [
-    {"item": "Cadeira de Rodas", "doador": "Carlos", "data": "10/10/2023"},
-    {"item": "Roupas de Frio", "doador": "Fernanda", "data": "09/10/2023"},
-  ];
+  late Future<List<dynamic>> _doacoesAtivasFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _validarAcessoAdmin();
+    _carregarDados();
 
-    _usuariosFuture = AdminService.instance.buscarUsuarios();
+    // Ouvinte para atualizar a tela conforme o admin digita na pesquisa
+    _searchController.addListener(() {
+      setState(() {
+        _filtroNome = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  void _carregarDados() {
+    setState(() {
+      _usuariosFuture = AdminService.instance.buscarUsuarios();
+      _doacoesAtivasFuture = AdminService.instance.buscarDoacoesAtivas();
+    });
   }
 
   Future<void> _validarAcessoAdmin() async {
@@ -55,6 +67,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -85,6 +98,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Atualizar Dados',
+            onPressed: _carregarDados,
+          ),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             tooltip: 'Sair',
@@ -159,48 +177,54 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildIndicadoresGlobais() {
-    return FutureBuilder<List<dynamic>>(
-      future: _usuariosFuture,
-      builder: (context, snapshot) {
-        
-        String totalReal = '...'; 
-        
-        if (snapshot.hasData) {
-          totalReal = snapshot.data!.length.toString();
-        }
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: const BoxDecoration(
+        color: Color(0xFF2D7A1F),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: FutureBuilder<List<dynamic>>(
+        future: _usuariosFuture,
+        builder: (context, snapshot) {
+          String totalUsuarios = '...';
+          String totalBloqueados = '...';
 
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          decoration: const BoxDecoration(
-            color: Color(0xFF2D7A1F),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(24),
-              bottomRight: Radius.circular(24),
-            ),
-          ),
-          child: Row(
+          if (snapshot.hasData) {
+            final lista = snapshot.data!;
+            totalUsuarios = lista.length.toString();
+            
+            // FILTRO EM TEMPO REAL: Conta quantos usuários possuem a flag bloqueado ativa
+            int bloqueadosCount = lista.where((u) => u['bloqueado'] == true).length;
+            totalBloqueados = bloqueadosCount.toString();
+          }
+
+          return Row(
             children: [
               Expanded(
                 child: _CardIndicador(
                   titulo: 'Total de Usuários',
-                  valor: totalReal,
+                  valor: totalUsuarios,
                   icone: Icons.people_alt_rounded,
                   corIcone: const Color(0xFF2D7A1F),
                 ),
               ),
               const SizedBox(width: 16),
+              // NOVO INDICADOR: Substituiu a contagem de doações concluídas mockadas
               Expanded(
                 child: _CardIndicador(
-                  titulo: 'Doações Concluídas',
-                  valor: doacoesConcluidas.toString(),
-                  icone: Icons.check_circle_rounded,
-                  corIcone: Colors.green,
+                  titulo: 'Usuários Bloqueados',
+                  valor: totalBloqueados,
+                  icone: Icons.block_flipped,
+                  corIcone: Colors.red,
                 ),
               ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -250,21 +274,239 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           );
         }
 
-        final usuariosCadastrados = snapshot.data!;
+        // BARRA DE PESQUISA: Filtra a lista localmente pelo que foi digitado
+        final usuariosCadastrados = snapshot.data!.where((usuario) {
+          final String nome = (usuario['nome'] ?? '').toString().toLowerCase();
+          return nome.contains(_filtroNome);
+        }).toList();
+
+        return Column(
+          children: [
+            // COMPONENTE NOVO: Barra de pesquisa com design limpo
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Pesquisar usuário pelo nome...',
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFF2D7A1F)),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.grey),
+                          onPressed: () => _searchController.clear(),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF2D7A1F), width: 1.5),
+                  ),
+                ),
+              ),
+            ),
+            
+            // Lista filtrada
+            Expanded(
+              child: usuariosCadastrados.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Nenhum usuário encontrado com esse nome.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      itemCount: usuariosCadastrados.length,
+                      itemBuilder: (context, index) {
+                        final usuario = usuariosCadastrados[index];
+                        final String nome = usuario['nome'] ?? 'Sem nome';
+                        final String email = usuario['email'] ?? 'Sem e-mail';
+
+                        final int rawId = usuario['id'] ?? 0;
+                        final String idUsuario = rawId.toString();
+
+                        final bool isBloqueado = usuario['bloqueado'] == true;
+                        final bool isDenunciado = usuario['denunciado'] == true;
+
+                        return Card(
+                          elevation: 2,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: isBloqueado 
+                                  ? Colors.red[100] 
+                                  : (isDenunciado ? Colors.amber[100] : Colors.blue[100]),
+                              child: Icon(
+                                isBloqueado 
+                                    ? Icons.lock 
+                                    : (isDenunciado ? Icons.warning_amber_rounded : Icons.person),
+                                color: isBloqueado 
+                                    ? Colors.red 
+                                    : (isDenunciado ? Colors.amber[800] : Colors.blue),
+                              ),
+                            ),
+                            title: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    nome,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isDenunciado) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber[800],
+                                      borderRadius: BorderRadius.circular(6),
+                                      ),
+                                    child: const Text(
+                                      'DENUNCIADO',
+                                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            subtitle: Text(email),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'ID: $idUsuario',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                
+                                if (isDenunciado)
+                                  IconButton(
+                                    icon: const Icon(Icons.gpp_good, color: Colors.green),
+                                    tooltip: 'Ignorar / Cancelar Denúncia',
+                                    onPressed: () async {
+                                      try {
+                                        await AdminService.instance.atualizarUsuario(
+                                          id: rawId,
+                                          denunciado: false,
+                                        );
+                                        _carregarDados();
+
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Denúncia cancelada com sucesso!'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      } catch (e) {
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                                        );
+                                      }
+                                    },
+                                  ),
+
+                                IconButton(
+                                  icon: Icon(
+                                    isBloqueado ? Icons.lock_open : Icons.block,
+                                    color: isBloqueado ? Colors.green : Colors.red,
+                                  ),
+                                  tooltip: isBloqueado ? 'Desbloquear' : 'Bloquear',
+                                  onPressed: () async {
+                                    try {
+                                      await AdminService.instance.atualizarUsuario(
+                                        id: rawId,
+                                        bloqueado: !isBloqueado,
+                                      );
+                                      _carregarDados();
+
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(isBloqueado ? 'Usuário desbloqueado!' : 'Usuário bloqueado!'),
+                                          backgroundColor: isBloqueado ? Colors.green : Colors.red,
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                                      );
+                                    }
+                                  },
+                                )
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildListaDoacoes() {
+    return FutureBuilder<List<dynamic>>(
+      future: _doacoesAtivasFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF2D7A1F)),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Erro ao carregar doações.\n${snapshot.error}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(
+            child: Text(
+              'Nenhuma doação ativa cadastrada.',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          );
+        }
+
+        final listaDoacoes = snapshot.data!;
 
         return ListView.builder(
           padding: const EdgeInsets.all(16.0),
-          itemCount: usuariosCadastrados.length,
+          itemCount: listaDoacoes.length,
           itemBuilder: (context, index) {
-            final usuario = usuariosCadastrados[index];
-            final String nome = usuario['nome'] ?? 'Sem nome';
-            final String email = usuario['email'] ?? 'Sem e-mail';
+            final doacao = listaDoacoes[index];
             
-            final int rawId = usuario['id'] ?? 0; 
-            final String idUsuario = rawId.toString();
-            
-            final bool isBloqueado = usuario['bloqueado'] == true;
-            
+            final String tituloItem = doacao["titulo"] ?? 'Item sem título';
+            final String nomeDoador = doacao["nome_doador"] ?? (doacao["pessoa"]?["nome"] ?? 'Anônimo');
+            final String dataPostagem = doacao["data_criacao"] ?? (doacao["created_at"] ?? 'Sem data');
+
             return Card(
               elevation: 2,
               margin: const EdgeInsets.only(bottom: 12),
@@ -272,111 +514,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: isBloqueado ? Colors.red[100] : Colors.blue[100],
-                  child: Icon(
-                    isBloqueado ? Icons.lock : Icons.person,
-                    color: isBloqueado ? Colors.red : Colors.blue,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.inventory_2_rounded,
+                    color: Colors.orange,
                   ),
                 ),
                 title: Text(
-                  nome,
+                  tituloItem,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                subtitle: Text(email),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'ID: $idUsuario',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        isBloqueado ? Icons.lock_open : Icons.block,
-                        color: isBloqueado ? Colors.green : Colors.red,
-                      ),
-                      tooltip: isBloqueado ? 'Desbloquear' : 'Bloquear',
-                      onPressed: () async {
-                        try {
-                          await AdminService.instance.atualizarUsuario(
-                            id: rawId, 
-                            bloqueado: !isBloqueado,
-                          );
-                          
-                          setState(() {
-                            _usuariosFuture = AdminService.instance.buscarUsuarios();
-                          });
-
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(isBloqueado ? 'Usuário desbloqueado!' : 'Usuário bloqueado!'),
-                              backgroundColor: isBloqueado ? Colors.green : Colors.red,
-                            ),
-                          );
-                        } catch (e) {
-                          // Mostra aviso de erro
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                      },
-                    )
-                  ],
+                subtitle: Text(
+                  'Doador: $nomeDoador\nPostado em: $dataPostagem',
+                ),
+                isThreeLine: true,
+                trailing: IconButton(
+                  icon: const Icon(Icons.remove_red_eye, color: Colors.grey),
+                  tooltip: 'Ver detalhes',
+                  onPressed: () {},
                 ),
               ),
             );
           },
-        );
-      },
-    );
-  }
-
-  Widget _buildListaDoacoes() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: doacoesAtivas.length,
-      itemBuilder: (context, index) {
-        final doacao = doacoesAtivas[index];
-
-        return Card(
-          elevation: 2,
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.inventory_2_rounded,
-                color: Colors.orange,
-              ),
-            ),
-            title: Text(
-              doacao["item"],
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              'Doador: ${doacao["doador"]}\nPostado em: ${doacao["data"]}',
-            ),
-            isThreeLine: true,
-            trailing: IconButton(
-              icon: const Icon(Icons.remove_red_eye, color: Colors.grey),
-              tooltip: 'Ver detalhes',
-              onPressed: () {},
-            ),
-          ),
         );
       },
     );
