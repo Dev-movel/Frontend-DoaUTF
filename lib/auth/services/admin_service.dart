@@ -15,6 +15,12 @@ class AdminService {
 
   Future<Options> _getAuthOptions() async {
     final token = await TokenStorage.instance.getAccessToken();
+    
+    if (token == null || token.isEmpty) {
+      debugPrint('🚨 [AdminService] Abortando requisição: Nenhum token encontrado no Storage!');
+      throw Exception('Usuário não autenticado.');
+    }
+    
     return Options(headers: {'Authorization': 'Bearer $token'});
   }
 
