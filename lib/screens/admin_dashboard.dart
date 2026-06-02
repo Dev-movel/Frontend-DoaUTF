@@ -466,7 +466,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-  Widget _buildListaDoacoes() {
+    Widget _buildListaDoacoes() {
     return FutureBuilder<List<dynamic>>(
       future: _doacoesAtivasFuture,
       builder: (context, snapshot) {
