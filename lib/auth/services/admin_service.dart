@@ -58,43 +58,23 @@ class AdminService {
     }
   }
 
-  Future<Map<String, dynamic>> atualizarUsuario({
-    required int id,
-    String? nome,
-    String? email,
-    String? senha,
-    String? dataNascimento,
-    bool? bloqueado,
-    bool? denunciado,
-  }) async {
+  Future<void> atualizarUsuario({required int id, bool? bloqueado, bool? denunciado}) async {
     try {
       final options = await _getAuthOptions();
-      final Map<String, dynamic> body = {};
+      final data = <String, dynamic>{};
       
-      if (nome != null && nome.isNotEmpty) body['nome'] = nome;
-      if (email != null && email.isNotEmpty) body['email'] = email;
-      if (senha != null && senha.isNotEmpty) body['senha'] = senha;
-      if (dataNascimento != null && dataNascimento.isNotEmpty) body['data_nascimento'] = dataNascimento;
-      if (bloqueado != null) body['bloqueado'] = bloqueado;
-      if (denunciado != null) body['denunciado'] = denunciado; 
+      if (bloqueado != null) data['bloqueado'] = bloqueado;
+      if (denunciado != null) data['denunciado'] = denunciado;
 
-      final response = await _dio.patch(
-        '/usuarios/$id',
-        data: body,
+      await _dio.patch(
+        '/usuarios/$id', 
+        data: data, 
         options: options,
       );
-
-      return response.data as Map<String, dynamic>;
+      debugPrint('✅ [PATCH /admin/usuarios/$id] Usuário atualizado.');
     } on DioException catch (e) {
-      debugPrint('❌ [PATCH /usuarios/$id] Falhou: ${e.response?.data}');
-      if (e.response?.statusCode == 400) {
-        throw Exception(_extractError(e) ?? 'Dados inválidos.');
-      } else if (e.response?.statusCode == 404) {
-        throw Exception('Usuário não encontrado.');
-      }
-      throw Exception('Erro interno ao atualizar usuário.');
-    } catch (e) {
-      throw Exception('Erro inesperado: $e');
+      debugPrint('❌ Erro ao atualizar usuário: ${e.response?.data}');
+      throw Exception('Falha ao atualizar o status do usuário.');
     }
   }
 

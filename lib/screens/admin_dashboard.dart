@@ -374,7 +374,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                     decoration: BoxDecoration(
                                       color: Colors.amber[800],
                                       borderRadius: BorderRadius.circular(6),
-                                      ),
+                                    ),
                                     child: const Text(
                                       'DENUNCIADO',
                                       style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),

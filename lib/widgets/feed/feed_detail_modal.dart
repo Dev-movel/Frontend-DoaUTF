@@ -119,6 +119,50 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
     }
   }
 
+  Future<void> _denunciarDoador() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Denunciar Doador'),
+        content: const Text(
+          'Tem certeza que deseja denunciar este usuário? A moderação analisará o caso.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Denunciar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      try {
+        await UsuarioService.instance.denunciarUsuario(item.doadorId ?? 0);
+        if (!mounted) return;
+        ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+          const SnackBar(
+            content: Text('Doador denunciado com sucesso. Obrigado por avisar!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao denunciar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_carregandoUsuario) {
@@ -148,7 +192,12 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _DoadorHeader(item: item, onClose: () => Navigator.of(context).pop()),
+                      _DoadorHeader(
+                        item: item,
+                        isDoador: isDoador,
+                        onDenunciar: _denunciarDoador,
+                        onClose: () => Navigator.of(context).pop(),
+                      ),
                       const SizedBox(height: 16),
                       _Badges(categoria: item.categoria, status: _currentStatus),
                       const SizedBox(height: 10),
@@ -335,11 +384,11 @@ class _NavBtn extends StatelessWidget {
       child: Container(
         width: 32,
         height: 32,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.black54,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child:  Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }
@@ -361,8 +410,16 @@ class _Placeholder extends StatelessWidget {
 
 class _DoadorHeader extends StatelessWidget {
   final FeedItem item;
+  final bool isDoador;
+  final VoidCallback onDenunciar;
   final VoidCallback onClose;
-  const _DoadorHeader({required this.item, required this.onClose});
+  
+  const _DoadorHeader({
+    required this.item,
+    required this.isDoador,
+    required this.onDenunciar,
+    required this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -401,6 +458,32 @@ class _DoadorHeader extends StatelessWidget {
             ],
           ),
         ),
+        
+        if (!isDoador)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
+            tooltip: 'Opções',
+            onSelected: (value) {
+              if (value == 'denunciar') onDenunciar();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'denunciar',
+                child: Row(
+                  children: [
+                    Icon(Icons.report_problem_outlined, color: Colors.red, size: 20),
+                    SizedBox(width: 10),
+                    Text(
+                      'Denunciar Doador',
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+        // ── Botão Fechar ──
         IconButton(
           onPressed: onClose,
           icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant),
