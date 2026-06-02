@@ -119,14 +119,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).toList();
     final atividadesRecentes = pedidosConcluidos.reversed.take(4).toList();
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const MainAppBar(activeRoute: '/dashboard'),
-            
+
       body: _isLoading
         ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
         : SingleChildScrollView(
-            padding: const EdgeInsets.all(32.0),
+            padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -147,12 +149,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Text(
                             'Bem-vindo de volta, $_nomeUsuario.',
-                            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.onSurface),
+                            style: TextStyle(fontSize: isMobile ? 20 : 32, fontWeight: FontWeight.bold, color: AppColors.onSurface),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
+                          Text(
                             'Sua jornada de sustentabilidade está fazendo uma diferença real na comunidade.',
-                            style: TextStyle(fontSize: 16, color: AppColors.onSurfaceVariant),
+                            style: TextStyle(fontSize: isMobile ? 13 : 16, color: AppColors.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -163,7 +165,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
             LayoutBuilder(
               builder: (context, constraints) {
-                double cardWidth = (constraints.maxWidth - 48) / (constraints.maxWidth > 800 ? 3 : 1);
+                final cols = constraints.maxWidth > 800 ? 3 : 1;
+                final totalSpacing = 24.0 * (cols - 1);
+                final cardWidth = (constraints.maxWidth - totalSpacing) / cols;
                 return Wrap(
                   spacing: 24,
                   runSpacing: 24,
@@ -262,7 +266,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 
-                const SizedBox(width: 48),
+                if (MediaQuery.of(context).size.width > 1000)
+                  const SizedBox(width: 48),
 
                 if (MediaQuery.of(context).size.width > 1000)
                   Expanded(
@@ -321,7 +326,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        Flexible(
+          child: Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+        ),
         if (hasMore)
           TextButton(
             onPressed: onViewAll,
@@ -438,7 +445,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: const [
                   Icon(Icons.eco_outlined, size: 14, color: AppColors.outline),
                   SizedBox(width: 8),
-                  Text('Pontuação de sustentabilidade: 0', style: TextStyle(fontSize: 12, color: AppColors.outline)),
+                  Flexible(
+                    child: Text(
+                      'Pontuação de sustentabilidade: 0',
+                      style: TextStyle(fontSize: 12, color: AppColors.outline),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ]),

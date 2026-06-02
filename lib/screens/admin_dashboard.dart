@@ -283,52 +283,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   nome,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                subtitle: Text(email),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'ID: $idUsuario',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        isBloqueado ? Icons.lock_open : Icons.block,
-                        color: isBloqueado ? Colors.green : Colors.red,
-                      ),
-                      tooltip: isBloqueado ? 'Desbloquear' : 'Bloquear',
-                      onPressed: () async {
-                        try {
-                          await AdminService.instance.atualizarUsuario(
-                            id: rawId, 
-                            bloqueado: !isBloqueado,
-                          );
-                          
-                          setState(() {
-                            _usuariosFuture = AdminService.instance.buscarUsuarios();
-                          });
-
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(isBloqueado ? 'Usuário desbloqueado!' : 'Usuário bloqueado!'),
-                              backgroundColor: isBloqueado ? Colors.green : Colors.red,
-                            ),
-                          );
-                        } catch (e) {
-                          // Mostra aviso de erro
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                      },
-                    )
-                  ],
+                subtitle: Text('$email  •  ID: $idUsuario'),
+                trailing: IconButton(
+                  icon: Icon(
+                    isBloqueado ? Icons.lock_open : Icons.block,
+                    color: isBloqueado ? Colors.green : Colors.red,
+                  ),
+                  tooltip: isBloqueado ? 'Desbloquear' : 'Bloquear',
+                  onPressed: () async {
+                    try {
+                      await AdminService.instance.atualizarUsuario(
+                        id: rawId,
+                        bloqueado: !isBloqueado,
+                      );
+                      setState(() {
+                        _usuariosFuture = AdminService.instance.buscarUsuarios();
+                      });
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(isBloqueado ? 'Usuário desbloqueado!' : 'Usuário bloqueado!'),
+                          backgroundColor: isBloqueado ? Colors.green : Colors.red,
+                        ),
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+                      );
+                    }
+                  },
                 ),
               ),
             );
