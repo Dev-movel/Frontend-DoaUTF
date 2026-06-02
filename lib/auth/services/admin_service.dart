@@ -13,20 +13,33 @@ class AdminService {
     ),
   );
 
-Future<List<dynamic>> buscarUsuarios() async {
+  Future<Options> _getAuthOptions() async {
+    final token = await TokenStorage.instance.getAccessToken();
+    
+    if (token == null || token.isEmpty) {
+      debugPrint('🚨 [AdminService] Abortando requisição: Nenhum token encontrado no Storage!');
+      throw Exception('Usuário não autenticado.');
+    }
+    
+    return Options(headers: {'Authorization': 'Bearer $token'});
+  }
+
+  String? _extractError(DioException e) {
+    if (e.response?.data is Map<String, dynamic>) {
+      return e.response?.data['erro'] ?? e.response?.data['message'];
+    }
+    return null;
+  }
+  Future<List<dynamic>> buscarUsuarios({bool apenasDenunciados = false}) async {
     try {
-      String? token;
-      try {
-        token = await TokenStorage.instance.getAccessToken();
-      } catch (e) {
-        debugPrint('Erro ao ler token no storage: $e');
-      }
+      final options = await _getAuthOptions();
 
       final response = await _dio.get(
         '/usuarios',
-        options: Options(headers: {
-          'Authorization': 'Bearer $token',
-        }),
+        queryParameters: {
+          if (apenasDenunciados) 'apenasDenunciados': 'true',
+        },
+        options: options,
       );
 
       if (response.data is List) {
@@ -36,51 +49,50 @@ Future<List<dynamic>> buscarUsuarios() async {
       }
 
     } on DioException catch (e) {
-      debugPrint('Status Code: ${e.response?.statusCode}');
-      debugPrint('Mensagem: ${e.message}');
+      debugPrint('❌ [GET /usuarios] Status Code: ${e.response?.statusCode}');
       debugPrint('Erro Dio: ${e.response?.data}');
-      throw Exception('Erro ao carregar usuários.');
+      throw Exception(_extractError(e) ?? 'Erro ao carregar usuários.');
     } catch (e) {
-      debugPrint('Erro inesperado no buscarUsuarios: $e');
+      debugPrint('❌ Erro inesperado no buscarUsuarios: $e');
       throw Exception('Erro inesperado ao buscar usuários.');
     }
   }
 
-  Future<Map<String, dynamic>> atualizarUsuario({
-    required int id,
-    String? nome,
-    String? email,
-    String? senha,
-    String? dataNascimento,
-    bool? bloqueado,
-  }) async {
+  Future<void> atualizarUsuario({required int id, bool? bloqueado, bool? denunciado}) async {
     try {
-      final token = await TokenStorage.instance.getAccessToken();
-
-      final Map<String, dynamic> body = {};
+      final options = await _getAuthOptions();
+      final data = <String, dynamic>{};
       
-      if (nome != null && nome.isNotEmpty) body['nome'] = nome;
-      if (email != null && email.isNotEmpty) body['email'] = email;
-      if (senha != null && senha.isNotEmpty) body['senha'] = senha;
-      if (dataNascimento != null && dataNascimento.isNotEmpty) body['data_nascimento'] = dataNascimento;
-      if (bloqueado != null) body['bloqueado'] = bloqueado;
+      if (bloqueado != null) data['bloqueado'] = bloqueado;
+      if (denunciado != null) data['denunciado'] = denunciado;
 
-      final response = await _dio.patch(
-        '/usuarios/$id',
-        data: body,
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      await _dio.patch(
+        '/usuarios/$id', 
+        data: data, 
+        options: options,
       );
-
-      return response.data as Map<String, dynamic>;
+      debugPrint('✅ [PATCH /admin/usuarios/$id] Usuário atualizado.');
     } on DioException catch (e) {
-      if (e.response?.statusCode == 400) {
-        throw Exception(e.response?.data['erro'] ?? 'Dados inválidos.');
-      } else if (e.response?.statusCode == 404) {
-        throw Exception('Usuário não encontrado.');
+      debugPrint('❌ Erro ao atualizar usuário: ${e.response?.data}');
+      throw Exception('Falha ao atualizar o status do usuário.');
+    }
+  }
+
+  Future<List<dynamic>> buscarDoacoesAtivas() async {
+    try {
+      final options = await _getAuthOptions(); 
+      final response = await _dio.get('/itens/ativos', options: options);
+      
+      if (response.data is List) {
+        return response.data as List<dynamic>;
       }
-      throw Exception('Erro interno ao atualizar usuário.');
+      return [];
+    } on DioException catch (e) {
+      debugPrint('⚠️ [GET /itens/ativos] Falhou (${e.response?.statusCode}). Verifique se a rota existe no Node.');
+      return []; 
     } catch (e) {
-      throw Exception('Erro inesperado: $e');
+      debugPrint('❌ Erro inesperado em buscarDoacoesAtivas: $e');
+      return [];
     }
   }
 }

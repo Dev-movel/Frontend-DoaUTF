@@ -33,6 +33,29 @@ class UsuarioService {
     }
   }
 
+  Future<void> denunciarUsuario(int usuarioId) async {
+    try {
+      final options = await _getAuthOptions();
+      
+      await _dio.patch(
+        '/usuarios/$usuarioId/denunciar',
+        options: options,
+      );
+
+      debugPrint('[PATCH /usuarios/$usuarioId/denunciar] Denúncia feita com sucesso!');
+    } on DioException catch (e) {
+      debugPrint('[PATCH /usuarios/$usuarioId/denunciar] Erro: ${e.response?.data}');
+      
+      if (e.response?.statusCode == 404) {
+        throw Exception('Usuário não encontrado.');
+      }
+      
+      throw Exception(_extractError(e) ?? 'Falha ao processar denúncia. Tente novamente mais tarde.');
+    } catch (e) {
+      throw Exception('Erro inesperado ao tentar denunciar: $e');
+    }
+  }
+
   Future<void> updateMe(Map<String, dynamic> dados) async {
     try {
       final options = await _getAuthOptions();

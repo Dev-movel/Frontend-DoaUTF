@@ -119,6 +119,50 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
     }
   }
 
+  Future<void> _denunciarDoador() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Denunciar Doador'),
+        content: const Text(
+          'Tem certeza que deseja denunciar este usuário? A moderação analisará o caso.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Denunciar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      try {
+        await UsuarioService.instance.denunciarUsuario(item.doadorId ?? 0);
+        if (!mounted) return;
+        ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+          const SnackBar(
+            content: Text('Doador denunciado com sucesso. Obrigado por avisar!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao denunciar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_carregandoUsuario) {
@@ -229,7 +273,71 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: conteudo,
+                    children: [
+                      _DoadorHeader(
+                        item: item,
+                        isDoador: isDoador,
+                        onDenunciar: _denunciarDoador,
+                        onClose: () => Navigator.of(context).pop(),
+                      ),
+                      const SizedBox(height: 16),
+                      _Badges(categoria: item.categoria, status: _currentStatus),
+                      const SizedBox(height: 10),
+                      Text(
+                        item.titulo,
+                        style: AppTextStyles.headline.copyWith(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        item.descricao ?? 'Sem descrição disponível.',
+                        style: AppTextStyles.body.copyWith(height: 1.6),
+                      ),
+                      const SizedBox(height: 16),
+                      _InfoCards(item: item),
+                      const SizedBox(height: 16),
+                      const _DicaSeguranca(),
+                      const SizedBox(height: 24),
+                      if (!_carregandoUsuario && _meuId != item.doadorId)
+                        _MeInteressaBtn(
+                          isLoading: _isLoading,
+                          cancelar: _solicitacaoId != null,
+                          onPressed: _solicitacaoId != null
+                              ? _cancelarSolicitacao
+                              : _meInteressa,
+                        ),
+                      
+                      if (isDoador && _currentStatus.toLowerCase() == 'disponivel') ...[
+                        const SizedBox(height: 24), 
+                        GerenciadorSolicitacoesWidget(
+                          itemId: item.id,
+                          onSolicitacaoAceita: () {
+                            setState(() {
+                              _currentStatus = 'reservado';
+                            });
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Solicitação aceita! O painel de agendamento foi liberado abaixo.'),
+                                backgroundColor: Color(0xFF0D631B),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+
+                      if (_currentStatus.toLowerCase() == 'reservado' || _currentStatus.toLowerCase() == 'agendado') ...[
+                        const SizedBox(height: 24),
+                        AgendamentoSection(
+                          itemId: item.id,
+                          itemStatus: _currentStatus,
+                          doadorId: item.doadorId ?? 0,
+                          usuarioId: usuarioLogadoId,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -358,11 +466,11 @@ class _NavBtn extends StatelessWidget {
       child: Container(
         width: 32,
         height: 32,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.black54,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child:  Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }
@@ -384,8 +492,16 @@ class _Placeholder extends StatelessWidget {
 
 class _DoadorHeader extends StatelessWidget {
   final FeedItem item;
+  final bool isDoador;
+  final VoidCallback onDenunciar;
   final VoidCallback onClose;
-  const _DoadorHeader({required this.item, required this.onClose});
+  
+  const _DoadorHeader({
+    required this.item,
+    required this.isDoador,
+    required this.onDenunciar,
+    required this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -424,6 +540,32 @@ class _DoadorHeader extends StatelessWidget {
             ],
           ),
         ),
+        
+        if (!isDoador)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
+            tooltip: 'Opções',
+            onSelected: (value) {
+              if (value == 'denunciar') onDenunciar();
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'denunciar',
+                child: Row(
+                  children: [
+                    Icon(Icons.report_problem_outlined, color: Colors.red, size: 20),
+                    SizedBox(width: 10),
+                    Text(
+                      'Denunciar Doador',
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+        // ── Botão Fechar ──
         IconButton(
           onPressed: onClose,
           icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant),
