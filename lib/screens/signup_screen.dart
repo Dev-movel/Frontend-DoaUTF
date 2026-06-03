@@ -99,9 +99,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
+            constraints: BoxConstraints(
               maxWidth: 900,
-              maxHeight: 850,
+              maxHeight: MediaQuery.of(context).size.height * 0.95,
             ),
             child: _buildModal(context),
           ),

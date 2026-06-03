@@ -7,37 +7,47 @@ class HowItWorksSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 700;
+    final cardWidth = screenWidth < 500 ? (screenWidth - 40).clamp(200.0, 250.0) : 250.0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 100),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 20 : 40,
+        vertical: isMobile ? 60 : 100,
+      ),
       child: Column(
         children: [
           Text(
             'Como funciona',
-            style: AppTextStyles.sectionTitle.copyWith(fontSize: 42),
+            style: AppTextStyles.sectionTitle.copyWith(fontSize: isMobile ? 32 : 42),
           ),
           const SizedBox(height: 60),
           Wrap(
-            spacing: 40,
-            runSpacing: 40,
+            spacing: isMobile ? 24 : 40,
+            runSpacing: isMobile ? 32 : 40,
             alignment: WrapAlignment.center,
-            children: const [
+            children: [
               _FeatureCard(
                 icon: Icons.add_photo_alternate_outlined,
                 title: 'Publique com Facilidade',
                 description:
                     'Cadastre itens para doação em poucos passos: basta uma foto e uma breve descrição.',
+                cardWidth: cardWidth,
               ),
               _FeatureCard(
                 icon: Icons.handshake_outlined,
                 title: 'Encontro Seguro',
                 description:
                     'A entrega acontece presencialmente em locais públicos dentro do próprio campus da UTFPR, somente entre membros da universidade.',
+                cardWidth: cardWidth,
               ),
               _FeatureCard(
                 icon: Icons.eco_outlined,
                 title: 'Impacto Ambiental',
                 description:
                     'Acompanhe sua contribuição ambiental em tempo real.',
+                cardWidth: cardWidth,
               ),
             ],
           ),
@@ -51,18 +61,19 @@ class _FeatureCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
+  final double cardWidth;
 
   const _FeatureCard({
     required this.icon,
     required this.title,
     required this.description,
+    required this.cardWidth,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      // largura mínima responsiva em vez de fixo
-      width: 250,
+      width: cardWidth,
       child: Column(
         children: [
           Semantics(

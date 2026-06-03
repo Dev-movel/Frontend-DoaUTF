@@ -100,7 +100,9 @@ class FeedFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 700;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 700;
+    final searchWidth = ((screenWidth - 32) * 0.38).clamp(160.0, 300.0);
 
     return Container(
       color: AppColors.background,
@@ -118,7 +120,7 @@ class FeedFilters extends StatelessWidget {
               children: [
                 Expanded(child: _buildChips()),
                 const SizedBox(width: 8),
-                SizedBox(width: 300, child: _buildSearchField()),
+                SizedBox(width: searchWidth, child: _buildSearchField()),
               ],
             ),
     );

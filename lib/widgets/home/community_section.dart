@@ -8,9 +8,14 @@ class CommunitySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 700;
+
     return Container(
-      margin: const EdgeInsets.all(40),
-      padding: const EdgeInsets.all(60),
+      margin: EdgeInsets.symmetric(
+        horizontal: isMobile ? 16 : 40,
+        vertical: isMobile ? 24 : 40,
+      ),
+      padding: EdgeInsets.all(isMobile ? 32 : 60),
       decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.circular(32),
@@ -22,7 +27,7 @@ class CommunitySection extends StatelessWidget {
             textAlign: TextAlign.center,
             style: AppTextStyles.sideTitle.copyWith(
               color: Colors.white,
-              fontSize: 28,
+              fontSize: isMobile ? 22 : 28,
             ),
           ),
           const SizedBox(height: 30),
@@ -31,8 +36,8 @@ class CommunitySection extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 40,
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 28 : 40,
                 vertical: 20,
               ),
               textStyle: const TextStyle(fontWeight: FontWeight.bold),
@@ -50,8 +55,13 @@ class HomeFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 700;
+
     return Container(
-      padding: const EdgeInsets.all(60),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 20 : 60,
+        vertical: 40,
+      ),
       child: Column(
         children: [
           const Divider(),

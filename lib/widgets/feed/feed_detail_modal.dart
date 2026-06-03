@@ -168,94 +168,125 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
 
     final int usuarioLogadoId = _meuId ?? 0;
     final bool isDoador = usuarioLogadoId == item.doadorId;
+    final screenSize = MediaQuery.of(context).size;
+    final isMobile = screenSize.width < 600;
 
     return Dialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: 960,
-        height: 640,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 40,
+        vertical: isMobile ? 24 : 40,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 960,
+          maxHeight: screenSize.height * (isMobile ? 0.9 : 0.85),
+        ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ImagemGaleria(fotos: item.fotos),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ← deles: isDoador + onDenunciar; nosso: onClose
-                      _DoadorHeader(
-                        item: item,
-                        isDoador: isDoador,
-                        onDenunciar: _denunciarDoador,
-                        onClose: () => Navigator.of(context).pop(),
+          child: isMobile
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 240,
+                      width: double.infinity,
+                      child: _ImagemGaleria(fotos: item.fotos),
+                    ),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: _buildContent(context, isDoador, usuarioLogadoId),
                       ),
-                      const SizedBox(height: 16),
-                      _Badges(categoria: item.categoria, status: _currentStatus),
-                      const SizedBox(height: 10),
-                      Text(
-                        item.titulo,
-                        style: AppTextStyles.headline.copyWith(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    ),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: 480,
+                      child: _ImagemGaleria(fotos: item.fotos),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: _buildContent(context, isDoador, usuarioLogadoId),
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        item.descricao ?? 'Sem descrição disponível.',
-                        style: AppTextStyles.body.copyWith(height: 1.6),
-                      ),
-                      const SizedBox(height: 16),
-                      // ← nosso: context passado para abrir o mapa
-                      _InfoCards(item: item, context: context),
-                      const SizedBox(height: 16),
-                      const _DicaSeguranca(),
-                      const SizedBox(height: 24),
-                      if (!_carregandoUsuario && _meuId != item.doadorId)
-                        _MeInteressaBtn(
-                          isLoading: _isLoading,
-                          cancelar: _solicitacaoId != null,
-                          onPressed: _solicitacaoId != null
-                              ? _cancelarSolicitacao
-                              : _meInteressa,
-                        ),
-                      if (isDoador && _currentStatus.toLowerCase() == 'disponivel') ...[
-                        const SizedBox(height: 24),
-                        GerenciadorSolicitacoesWidget(
-                          itemId: item.id,
-                          onSolicitacaoAceita: () {
-                            setState(() => _currentStatus = 'reservado');
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Solicitação aceita! O painel de agendamento foi liberado abaixo.'),
-                                backgroundColor: Color(0xFF0D631B),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                      if (_currentStatus.toLowerCase() == 'reservado' ||
-                          _currentStatus.toLowerCase() == 'agendado') ...[
-                        const SizedBox(height: 24),
-                        AgendamentoSection(
-                          itemId: item.id,
-                          itemStatus: _currentStatus,
-                          doadorId: item.doadorId ?? 0,
-                          usuarioId: usuarioLogadoId,
-                        ),
-                      ],
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, bool isDoador, int usuarioLogadoId) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _DoadorHeader(
+          item: item,
+          isDoador: isDoador,
+          onDenunciar: _denunciarDoador,
+          onClose: () => Navigator.of(context).pop(),
+        ),
+        const SizedBox(height: 16),
+        _Badges(categoria: item.categoria, status: _currentStatus),
+        const SizedBox(height: 10),
+        Text(
+          item.titulo,
+          style: AppTextStyles.headline.copyWith(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          item.descricao ?? 'Sem descrição disponível.',
+          style: AppTextStyles.body.copyWith(height: 1.6),
+        ),
+        const SizedBox(height: 16),
+        _InfoCards(item: item, context: context),
+        const SizedBox(height: 16),
+        const _DicaSeguranca(),
+        const SizedBox(height: 24),
+        if (!_carregandoUsuario && _meuId != item.doadorId)
+          _MeInteressaBtn(
+            isLoading: _isLoading,
+            cancelar: _solicitacaoId != null,
+            onPressed: _solicitacaoId != null
+                ? _cancelarSolicitacao
+                : _meInteressa,
+          ),
+        if (isDoador && _currentStatus.toLowerCase() == 'disponivel') ...[
+          const SizedBox(height: 24),
+          GerenciadorSolicitacoesWidget(
+            itemId: item.id,
+            onSolicitacaoAceita: () {
+              setState(() => _currentStatus = 'reservado');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Solicitação aceita! O painel de agendamento foi liberado abaixo.'),
+                  backgroundColor: Color(0xFF0D631B),
+                ),
+              );
+            },
+          ),
+        ],
+        if (_currentStatus.toLowerCase() == 'reservado' ||
+            _currentStatus.toLowerCase() == 'agendado') ...[
+          const SizedBox(height: 24),
+          AgendamentoSection(
+            itemId: item.id,
+            itemStatus: _currentStatus,
+            doadorId: item.doadorId ?? 0,
+            usuarioId: usuarioLogadoId,
+          ),
+        ],
+      ],
     );
   }
 }
@@ -299,11 +330,9 @@ class _ImagemGaleriaState extends State<_ImagemGaleria> {
   Widget build(BuildContext context) {
     final fotos = widget.fotos;
 
-    return SizedBox(
-      width: 480,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
+    return Stack(
+      fit: StackFit.expand,
+      children: [
           fotos.isEmpty
               ? _Placeholder()
               : PageView.builder(
@@ -347,7 +376,6 @@ class _ImagemGaleriaState extends State<_ImagemGaleria> {
               ),
             ),
         ],
-      ),
     );
   }
 }

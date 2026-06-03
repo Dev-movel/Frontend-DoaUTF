@@ -13,18 +13,23 @@ class ImpactSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isMobile = MediaQuery.of(context).size.width < 700;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 700;
+    final imageHeight = screenWidth < 900 ? 200.0 : 260.0;
 
     return Container(
       width: double.infinity,
       color: AppColors.surfaceContainerLow,
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 20 : 40,
+        vertical: isMobile ? 40 : 80,
+      ),
       child: Column(
         children: [
           Text(
             'O Impacto da Generosidade Compartilhada',
             textAlign: TextAlign.center,
-            style: AppTextStyles.sectionTitle.copyWith(fontSize: 32),
+            style: AppTextStyles.sectionTitle.copyWith(fontSize: isMobile ? 26 : 32),
           ),
           const SizedBox(height: 20),
           ConstrainedBox(
@@ -33,7 +38,7 @@ class ImpactSection extends StatelessWidget {
               'Cada item que encontra um novo lar atraves do DoaUTF representa '
               'um passo para longe do consumo linear e um avanco para a sustentabilidade local.',
               textAlign: TextAlign.center,
-              style: AppTextStyles.body.copyWith(fontSize: 18, height: 1.7),
+              style: AppTextStyles.body.copyWith(fontSize: isMobile ? 15 : 18, height: 1.7),
             ),
           ),
           const SizedBox(height: 60),
@@ -42,20 +47,20 @@ class ImpactSection extends StatelessWidget {
               children: _impactImages
                   .map((path) => Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: _ImpactImage(path: path),
+                        child: _ImpactImage(path: path, height: 200),
                       ))
                   .toList(),
             )
           else
             SizedBox(
-              height: 260,
+              height: imageHeight,
               child: Row(
                 children: _impactImages
                     .map(
                       (path) => Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: _ImpactImage(path: path),
+                          child: _ImpactImage(path: path, height: imageHeight),
                         ),
                       ),
                     )
@@ -70,7 +75,8 @@ class ImpactSection extends StatelessWidget {
 
 class _ImpactImage extends StatelessWidget {
   final String path;
-  const _ImpactImage({required this.path});
+  final double height;
+  const _ImpactImage({required this.path, required this.height});
 
   @override
   Widget build(BuildContext context) {
@@ -78,12 +84,12 @@ class _ImpactImage extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Image.asset(
         path,
-        height: 260,
+        height: height,
         width: double.infinity,
         fit: BoxFit.cover,
         semanticLabel: 'Foto de impacto social do DoaUTF',
         errorBuilder: (_, __, ___) => Container(
-          height: 260,
+          height: height,
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.07),
             borderRadius: BorderRadius.circular(16),

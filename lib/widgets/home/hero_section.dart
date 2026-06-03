@@ -9,28 +9,29 @@ class HeroSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 900;
+    final isMobile = screenWidth < 600;
+    final isTablet = screenWidth < 900;
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 20 : 40,
-        vertical: 60,
+        horizontal: isMobile ? 20 : (isTablet ? 32 : 40),
+        vertical: isMobile ? 40 : 60,
       ),
-      child: isMobile
+      child: (isMobile || isTablet)
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _HeroText(isMobile: isMobile),
+                _HeroText(isMobile: isMobile || isTablet),
                 const SizedBox(height: 50),
-                _HeroImage(isMobile: isMobile),
+                _HeroImage(isMobile: isMobile || isTablet, isTablet: isTablet),
               ],
             )
           : Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(child: _HeroText(isMobile: isMobile)),
+                Expanded(child: _HeroText(isMobile: false)),
                 const SizedBox(width: 60),
-                Expanded(child: _HeroImage(isMobile: isMobile)),
+                Expanded(child: _HeroImage(isMobile: false, isTablet: false)),
               ],
             ),
     );
@@ -43,6 +44,11 @@ class _HeroText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final heroFontSize = isMobile
+        ? 36.0
+        : (screenWidth < 1100 ? 50.0 : 64.0);
+
     return Column(
       crossAxisAlignment:
           isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
@@ -51,7 +57,7 @@ class _HeroText extends StatelessWidget {
           'Dê nova vida ao\nque você não\nprecisa mais.',
           textAlign: isMobile ? TextAlign.center : TextAlign.left,
           style: AppTextStyles.hero.copyWith(
-            fontSize: isMobile ? 42 : 64,
+            fontSize: heroFontSize,
             height: 1.1,
           ),
         ),
@@ -110,20 +116,23 @@ class _HeroText extends StatelessWidget {
 
 class _HeroImage extends StatelessWidget {
   final bool isMobile;
-  const _HeroImage({required this.isMobile});
+  final bool isTablet;
+  const _HeroImage({required this.isMobile, required this.isTablet});
 
   @override
   Widget build(BuildContext context) {
+    final imageHeight = isMobile ? 280.0 : (isTablet ? 380.0 : 550.0);
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: Image.asset(
         'assets/images/home.jpg',
-        height: isMobile ? 350 : 550,
+        height: imageHeight,
         width: double.infinity,
         fit: BoxFit.cover,
         semanticLabel: 'Pessoas colaborando em doações comunitárias',
         errorBuilder: (context, error, stackTrace) => Container(
-          height: isMobile ? 350 : 550,
+          height: imageHeight,
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.08),
             borderRadius: BorderRadius.circular(24),
