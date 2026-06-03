@@ -111,6 +111,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const MainAppBar(activeRoute: '/profile'),
@@ -119,14 +121,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : _usuario == null
             ? const Center(child: Text('Erro ao carregar perfil.'))
             : SingleChildScrollView(
-                padding: const EdgeInsets.all(32.0),
+                padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Configurações de Perfil', 
-                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
-                    const Text('Mantenha seus dados atualizados para facilitar a comunicação nas doações.',
-                      style: TextStyle(fontSize: 16, color: AppColors.onSurfaceVariant)),
+                    Text('Configurações de Perfil',
+                      style: TextStyle(fontSize: isMobile ? 22 : 32, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
+                    Text('Mantenha seus dados atualizados para facilitar a comunicação nas doações.',
+                      style: TextStyle(fontSize: isMobile ? 13 : 16, color: AppColors.onSurfaceVariant)),
                     const SizedBox(height: 40),
 
                     Center(
@@ -178,48 +180,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         decoration: const InputDecoration(labelText: 'WhatsApp', border: OutlineInputBorder()),
                         keyboardType: TextInputType.phone,
                       ),
-                    ]),
+                    ], isMobile: isMobile),
 
                     const SizedBox(height: 32),
 
                     _buildFormSection('Endereço', [
-                      Row(
-                        children: [
-                          Expanded(flex: 3, child: TextFormField(controller: _ruaController, decoration: const InputDecoration(labelText: 'Rua', border: OutlineInputBorder()))),
-                          const SizedBox(width: 16),
-                          Expanded(flex: 1, child: TextFormField(controller: _numeroController, decoration: const InputDecoration(labelText: 'Número', border: OutlineInputBorder()))),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(child: TextFormField(controller: _bairroController, decoration: const InputDecoration(labelText: 'Bairro', border: OutlineInputBorder()))),
-                          const SizedBox(width: 16),
-                          Expanded(child: TextFormField(controller: _cidadeController, decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder()))),
-                        ],
-                      ),
-                    ]),
+                      if (isMobile) ...[
+                        TextFormField(controller: _ruaController, decoration: const InputDecoration(labelText: 'Rua', border: OutlineInputBorder())),
+                        const SizedBox(height: 12),
+                        TextFormField(controller: _numeroController, decoration: const InputDecoration(labelText: 'Número', border: OutlineInputBorder())),
+                        const SizedBox(height: 12),
+                        TextFormField(controller: _bairroController, decoration: const InputDecoration(labelText: 'Bairro', border: OutlineInputBorder())),
+                        const SizedBox(height: 12),
+                        TextFormField(controller: _cidadeController, decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder())),
+                      ] else ...[
+                        Row(
+                          children: [
+                            Expanded(flex: 3, child: TextFormField(controller: _ruaController, decoration: const InputDecoration(labelText: 'Rua', border: OutlineInputBorder()))),
+                            const SizedBox(width: 16),
+                            Expanded(flex: 1, child: TextFormField(controller: _numeroController, decoration: const InputDecoration(labelText: 'Número', border: OutlineInputBorder()))),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(child: TextFormField(controller: _bairroController, decoration: const InputDecoration(labelText: 'Bairro', border: OutlineInputBorder()))),
+                            const SizedBox(width: 16),
+                            Expanded(child: TextFormField(controller: _cidadeController, decoration: const InputDecoration(labelText: 'Cidade', border: OutlineInputBorder()))),
+                          ],
+                        ),
+                      ],
+                    ], isMobile: isMobile),
 
                     const SizedBox(height: 40),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
+                    if (isMobile)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               padding: const EdgeInsets.symmetric(vertical: 20),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             onPressed: _isSaving ? null : _salvarPerfil,
-                            child: _isSaving 
+                            child: _isSaving
                               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                               : const Text('Salvar Alterações', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: OutlinedButton(
+                          const SizedBox(height: 12),
+                          OutlinedButton(
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 20),
                               side: const BorderSide(color: AppColors.primary),
@@ -228,9 +239,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onPressed: _abrirModalSenha,
                             child: const Text('Alterar Minha Senha', style: TextStyle(color: AppColors.primary, fontSize: 16)),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 20),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: _isSaving ? null : _salvarPerfil,
+                              child: _isSaving
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Text('Salvar Alterações', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 20),
+                                side: const BorderSide(color: AppColors.primary),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: _abrirModalSenha,
+                              child: const Text('Alterar Minha Senha', style: TextStyle(color: AppColors.primary, fontSize: 16)),
+                            ),
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: 60),
                   ],
                 ),
@@ -238,14 +278,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildFormSection(String title, List<Widget> fields) {
+  Widget _buildFormSection(String title, List<Widget> fields, {bool isMobile = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         Container(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
