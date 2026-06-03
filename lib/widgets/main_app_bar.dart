@@ -5,7 +5,6 @@ import '../auth/services/token_storage.dart';
 import '../auth/services/auth_service.dart';
 import '../theme/app_colors.dart';
 
-// Opções do dropdown do avatar
 enum _MenuOpcao { perfil, sair }
 
 class MainAppBar extends StatefulWidget implements PreferredSizeWidget {
@@ -41,7 +40,6 @@ class _MainAppBarState extends State<MainAppBar> {
       if (mounted) setState(() => _autenticado = false);
       return;
     }
-
     try {
       final user = await UsuarioService.instance.getMe();
       if (mounted) {
@@ -81,77 +79,147 @@ class _MainAppBarState extends State<MainAppBar> {
       titleSpacing: 0,
       title: Row(
         children: [
-          if (isMobile)
+          // ── Hamburguer mobile (só autenticado) ───────────────────────────
+          if (isMobile && _autenticado)
             PopupMenuButton<String>(
               icon: const Icon(Icons.menu, color: AppColors.onSurface),
               onSelected: (route) {
-                if (route == '/mapa') return;
-                if (route == '/doar') {
+                if (route == '/mapa') {
+                  Navigator.pushNamed(context, route);
+                } else if (route == '/doar') {
                   Navigator.pushNamed(context, route);
                 } else {
                   Navigator.pushReplacementNamed(context, route);
                 }
               },
               itemBuilder: (_) => [
-                PopupMenuItem(value: '/home', child: Text('Home', style: _navStyle('/home'))),
-                PopupMenuItem(value: '/feed', child: Text('Feed', style: _navStyle('/feed'))),
-                PopupMenuItem(value: '/doar', child: Text('Doar', style: _navStyle('/doar'))),
-                PopupMenuItem(value: '/mapa', child: Text('Mapa', style: _navStyle('/mapa'))),
+                PopupMenuItem(value: '/feed',      child: Text('Feed',      style: _navStyle('/feed'))),
+                PopupMenuItem(value: '/doar',      child: Text('Doar',      style: _navStyle('/doar'))),
+                PopupMenuItem(value: '/mapa',      child: Text('Mapa',      style: _navStyle('/mapa'))),
                 PopupMenuItem(value: '/dashboard', child: Text('Dashboard', style: _navStyle('/dashboard'))),
-                PopupMenuItem(value: '/profile', child: Text('Perfil', style: _navStyle('/profile'))),
+                PopupMenuItem(value: '/profile',   child: Text('Perfil',    style: _navStyle('/profile'))),
               ],
             )
           else
             const SizedBox(width: 20),
+
           widget.leading ?? const SizedBox.shrink(),
+
           const Text(
             'DoaUTF',
             style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
           ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
-                  child: Text('Home', style: _navStyle('/home')),
+
+          // ── Menu desktop: só aparece quando autenticado ──────────────────
+          if (!isMobile && _autenticado)
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/feed'),
+                    child: Text('Feed', style: _navStyle('/feed')),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, '/doar'),
+                    child: Text('Doar', style: _navStyle('/doar')),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, '/mapa'),
+                    child: Text('Mapa', style: _navStyle('/mapa')),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/dashboard'),
+                    child: Text('Dashboard', style: _navStyle('/dashboard')),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/profile'),
+                    child: Text('Perfil', style: _navStyle('/profile')),
+                  ),
+                ],
+              ),
+            )
+          else
+            const Spacer(),
+
+          // ── Notificação + avatar com dropdown: só quando autenticado ─────
+          if (_autenticado) ...[
+            const Icon(Icons.notifications_none, color: AppColors.onSurface),
+            const SizedBox(width: 10),
+            PopupMenuButton<_MenuOpcao>(
+              offset: const Offset(0, 44),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: AppColors.surface,
+              elevation: 4,
+              tooltip: '',
+              onSelected: (opcao) {
+                switch (opcao) {
+                  case _MenuOpcao.perfil:
+                    Navigator.pushNamed(context, '/profile');
+                  case _MenuOpcao.sair:
+                    _sair();
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  enabled: false,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _usuario?.nome ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurface,
+                        ),
+                      ),
+                      Text(
+                        _usuario?.email ?? '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/feed'),
-                  child: Text('Feed', style: _navStyle('/feed')),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: _MenuOpcao.perfil,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.person_outline, size: 18, color: AppColors.onSurface),
+                      SizedBox(width: 10),
+                      Text('Configurações de perfil'),
+                    ],
+                  ),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/doar'),
-                  child: Text('Doar', style: _navStyle('/doar')),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: Text('Mapa', style: _navStyle('/mapa')),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/dashboard'),
-                  child: Text('Dashboard', style: _navStyle('/dashboard')),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/profile'),
-                  child: Text('Perfil', style: _navStyle('/profile')),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: _MenuOpcao.sair,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout, size: 18, color: Colors.red.shade600),
+                      const SizedBox(width: 10),
+                      Text('Sair', style: TextStyle(color: Colors.red.shade600)),
+                    ],
+                  ),
                 ),
               ],
-            ),
-          ),
-          const Icon(Icons.notifications_none, color: AppColors.onSurface),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: () => Navigator.pushNamed(context, '/profile'),
-            child: CircleAvatar(
-              radius: 15,
-              backgroundColor: AppColors.primary,
-              child: Text(
-                _usuario != null ? _usuario!.nome[0].toUpperCase() : '?',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
+              child: CircleAvatar(
+                radius: 15,
+                backgroundColor: AppColors.primary,
+                child: Text(
+                  _usuario != null ? _usuario!.nome[0].toUpperCase() : '?',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
               ),
             ),
-          ),
+          ],
+
           const SizedBox(width: 20),
         ],
       ),

@@ -6,7 +6,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../scheduling/agendamento_section.dart';
 import '../scheduling/gerenciador_solicitacoes.dart';
-import '../mapa/modal_mapa_local.dart'; // ← único import adicionado
+import '../mapa/modal_mapa_local.dart';
 
 class FeedDetailModal {
   FeedDetailModal._();
@@ -168,9 +168,7 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
 
     final int usuarioLogadoId = _meuId ?? 0;
     final bool isDoador = usuarioLogadoId == item.doadorId;
-    final bool isDisponivel = _currentStatus.toLowerCase() == 'disponivel';
-    final bool isReservadoOuAgendado = _currentStatus.toLowerCase() == 'reservado' || _currentStatus.toLowerCase() == 'agendado';
-    
+
     return Dialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -189,7 +187,13 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _DoadorHeader(item: item, onClose: () => Navigator.of(context).pop()),
+                      // ← deles: isDoador + onDenunciar; nosso: onClose
+                      _DoadorHeader(
+                        item: item,
+                        isDoador: isDoador,
+                        onDenunciar: _denunciarDoador,
+                        onClose: () => Navigator.of(context).pop(),
+                      ),
                       const SizedBox(height: 16),
                       _Badges(categoria: item.categoria, status: _currentStatus),
                       const SizedBox(height: 10),
@@ -206,7 +210,8 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                         style: AppTextStyles.body.copyWith(height: 1.6),
                       ),
                       const SizedBox(height: 16),
-                      _InfoCards(item: item),
+                      // ← nosso: context passado para abrir o mapa
+                      _InfoCards(item: item, context: context),
                       const SizedBox(height: 16),
                       const _DicaSeguranca(),
                       const SizedBox(height: 24),
@@ -218,16 +223,12 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                               ? _cancelarSolicitacao
                               : _meInteressa,
                         ),
-                      
                       if (isDoador && _currentStatus.toLowerCase() == 'disponivel') ...[
-                        const SizedBox(height: 24), 
+                        const SizedBox(height: 24),
                         GerenciadorSolicitacoesWidget(
                           itemId: item.id,
                           onSolicitacaoAceita: () {
-                            setState(() {
-                              _currentStatus = 'reservado';
-                            });
-
+                            setState(() => _currentStatus = 'reservado');
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Solicitação aceita! O painel de agendamento foi liberado abaixo.'),
@@ -237,8 +238,8 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                           },
                         ),
                       ],
-
-                      if (_currentStatus.toLowerCase() == 'reservado' || _currentStatus.toLowerCase() == 'agendado') ...[
+                      if (_currentStatus.toLowerCase() == 'reservado' ||
+                          _currentStatus.toLowerCase() == 'agendado') ...[
                         const SizedBox(height: 24),
                         AgendamentoSection(
                           itemId: item.id,
@@ -361,12 +362,8 @@ class _NavBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: Colors.black54,
-          shape: BoxShape.circle,
-        ),
+        width: 32, height: 32,
+        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
         child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
@@ -386,13 +383,15 @@ class _Placeholder extends StatelessWidget {
 }
 
 // ── Header do doador ────────────────────────────────────────────────────────
+// Deles: isDoador + onDenunciar (menu de denúncia)
+// Nosso: onClose (botão fechar)
 
 class _DoadorHeader extends StatelessWidget {
   final FeedItem item;
   final bool isDoador;
   final VoidCallback onDenunciar;
   final VoidCallback onClose;
-  
+
   const _DoadorHeader({
     required this.item,
     required this.isDoador,
@@ -427,7 +426,6 @@ class _DoadorHeader extends StatelessWidget {
             ],
           ),
         ),
-        
         if (!isDoador)
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
@@ -451,8 +449,6 @@ class _DoadorHeader extends StatelessWidget {
               ),
             ],
           ),
-          
-        // ── Botão Fechar ──
         IconButton(
           onPressed: onClose,
           icon: const Icon(Icons.close, color: AppColors.onSurfaceVariant),
@@ -515,7 +511,7 @@ class _Badges extends StatelessWidget {
 }
 
 // ── Cards de ESTADO e LOCAL ─────────────────────────────────────────────────
-// Só o card LOCAL virou botão — visual idêntico ao original.
+// Nosso: card LOCAL clicável que abre o mapa
 
 class _InfoCards extends StatelessWidget {
   final FeedItem item;
@@ -526,7 +522,6 @@ class _InfoCards extends StatelessWidget {
   Widget build(BuildContext ctx) {
     return Row(
       children: [
-        // Card ESTADO — sem alteração
         Expanded(
           child: _InfoCard(
             icone: Icons.shield_outlined,
@@ -535,7 +530,6 @@ class _InfoCards extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        // Card LOCAL — agora é clicável e abre o mapa
         Expanded(
           child: _InfoCardBotao(
             icone: Icons.location_on_outlined,
@@ -552,7 +546,6 @@ class _InfoCards extends StatelessWidget {
   }
 }
 
-/// Card estático — igual ao original
 class _InfoCard extends StatelessWidget {
   final IconData icone;
   final String rotulo;
@@ -586,7 +579,6 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
-/// Card clicável — mesmo visual, com InkWell e indicador de mapa
 class _InfoCardBotao extends StatelessWidget {
   final IconData icone;
   final String rotulo;
@@ -622,7 +614,7 @@ class _InfoCardBotao extends StatelessWidget {
                       valor,
                       style: AppTextStyles.input.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primary,        // texto na cor primária indica que é clicável
+                        color: AppColors.primary,
                         decoration: TextDecoration.underline,
                         decorationColor: AppColors.primary,
                       ),
@@ -630,7 +622,6 @@ class _InfoCardBotao extends StatelessWidget {
                   ],
                 ),
               ),
-              // Seta pequena reforça que é interativo
               const Icon(Icons.chevron_right, color: AppColors.primary, size: 16),
             ],
           ),
