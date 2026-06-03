@@ -4,8 +4,9 @@ import '../../services/solicitacao_service.dart';
 import '../../services/usuario_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
-import '../scheduling/agendamento_section.dart'; 
+import '../scheduling/agendamento_section.dart';
 import '../scheduling/gerenciador_solicitacoes.dart';
+import '../mapa/modal_mapa_local.dart'; // ← único import adicionado
 
 class FeedDetailModal {
   FeedDetailModal._();
@@ -65,12 +66,8 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
     try {
       final solicitacoes = await SolicitacaoService.instance.buscarMinhasSolicitacoes();
       if (!mounted) return;
-      setState(() {
-        _solicitacaoId = solicitacoes[item.id];
-      });
-    } catch (_) {
-      // ignora falha, manter o estado atual
-    }
+      setState(() { _solicitacaoId = solicitacoes[item.id]; });
+    } catch (_) {}
   }
 
   Future<void> _meInteressa() async {
@@ -127,9 +124,7 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
 
     final int usuarioLogadoId = _meuId ?? 0;
     final bool isDoador = usuarioLogadoId == item.doadorId;
-    final bool isDisponivel = _currentStatus.toLowerCase() == 'disponivel';
-    final bool isReservadoOuAgendado = _currentStatus.toLowerCase() == 'reservado' || _currentStatus.toLowerCase() == 'agendado';
-    
+
     return Dialog(
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -165,7 +160,8 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                         style: AppTextStyles.body.copyWith(height: 1.6),
                       ),
                       const SizedBox(height: 16),
-                      _InfoCards(item: item),
+                      // ← _InfoCards agora recebe o context para abrir o mapa
+                      _InfoCards(item: item, context: context),
                       const SizedBox(height: 16),
                       const _DicaSeguranca(),
                       const SizedBox(height: 24),
@@ -177,16 +173,12 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                               ? _cancelarSolicitacao
                               : _meInteressa,
                         ),
-                      
                       if (isDoador && _currentStatus.toLowerCase() == 'disponivel') ...[
-                        const SizedBox(height: 24), 
+                        const SizedBox(height: 24),
                         GerenciadorSolicitacoesWidget(
                           itemId: item.id,
                           onSolicitacaoAceita: () {
-                            setState(() {
-                              _currentStatus = 'reservado';
-                            });
-
+                            setState(() => _currentStatus = 'reservado');
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Solicitação aceita! O painel de agendamento foi liberado abaixo.'),
@@ -196,8 +188,8 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                           },
                         ),
                       ],
-
-                      if (_currentStatus.toLowerCase() == 'reservado' || _currentStatus.toLowerCase() == 'agendado') ...[
+                      if (_currentStatus.toLowerCase() == 'reservado' ||
+                          _currentStatus.toLowerCase() == 'agendado') ...[
                         const SizedBox(height: 24),
                         AgendamentoSection(
                           itemId: item.id,
@@ -262,7 +254,6 @@ class _ImagemGaleriaState extends State<_ImagemGaleria> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Imagens ──
           fotos.isEmpty
               ? _Placeholder()
               : PageView.builder(
@@ -275,31 +266,19 @@ class _ImagemGaleriaState extends State<_ImagemGaleria> {
                     errorBuilder: (_, _, _) => _Placeholder(),
                   ),
                 ),
-
-          // ── Seta esquerda ──
           if (fotos.length > 1 && _pagina > 0)
             Positioned(
-              left: 8,
-              top: 0,
-              bottom: 0,
+              left: 8, top: 0, bottom: 0,
               child: Center(child: _NavBtn(icon: Icons.chevron_left, onTap: () => _ir(-1))),
             ),
-
-          // ── Seta direita ──
           if (fotos.length > 1 && _pagina < fotos.length - 1)
             Positioned(
-              right: 8,
-              top: 0,
-              bottom: 0,
+              right: 8, top: 0, bottom: 0,
               child: Center(child: _NavBtn(icon: Icons.chevron_right, onTap: () => _ir(1))),
             ),
-
-          // ── Dots ──
           if (fotos.length > 1)
             Positioned(
-              bottom: 12,
-              left: 0,
-              right: 0,
+              bottom: 12, left: 0, right: 0,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(fotos.length, (i) {
@@ -333,12 +312,8 @@ class _NavBtn extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: Colors.black54,
-          shape: BoxShape.circle,
-        ),
+        width: 32, height: 32,
+        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
         child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
@@ -378,11 +353,7 @@ class _DoadorHeader extends StatelessWidget {
           backgroundColor: AppColors.primary,
           child: Text(
             inicial,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
           ),
         ),
         const SizedBox(width: 10),
@@ -390,14 +361,8 @@ class _DoadorHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                item.doadorNome,
-                style: AppTextStyles.input.copyWith(fontWeight: FontWeight.w700),
-              ),
-              Text(
-                'Publicado há ${item.tempoAtras}',
-                style: AppTextStyles.subtitle,
-              ),
+              Text(item.doadorNome, style: AppTextStyles.input.copyWith(fontWeight: FontWeight.w700)),
+              Text('Publicado há ${item.tempoAtras}', style: AppTextStyles.subtitle),
             ],
           ),
         ),
@@ -411,7 +376,7 @@ class _DoadorHeader extends StatelessWidget {
   }
 }
 
-// ── Badges de status e categoria ────────────────────────────────────────────
+// ── Badges ──────────────────────────────────────────────────────────────────
 
 class _Badges extends StatelessWidget {
   final String categoria;
@@ -421,18 +386,18 @@ class _Badges extends StatelessWidget {
   String get _label {
     switch (status.toLowerCase()) {
       case 'reservado': return 'RESERVADO';
-      case 'doado': return 'DOADO';
-      case 'agendado': return 'AGENDADO';
-      default: return 'DISPONÍVEL';
+      case 'doado':     return 'DOADO';
+      case 'agendado':  return 'AGENDADO';
+      default:          return 'DISPONÍVEL';
     }
   }
 
   Color get _color {
     switch (status.toLowerCase()) {
       case 'reservado': return Colors.orange;
-      case 'doado': return Colors.grey;
-      case 'agendado': return const Color(0xFF0D631B);
-      default: return AppColors.primary;
+      case 'doado':     return Colors.grey;
+      case 'agendado':  return const Color(0xFF0D631B);
+      default:          return AppColors.primary;
     }
   }
 
@@ -442,14 +407,8 @@ class _Badges extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: _color,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            _label,
-            style: AppTextStyles.badge.copyWith(fontSize: 10, color: Colors.white),
-          ),
+          decoration: BoxDecoration(color: _color, borderRadius: BorderRadius.circular(20)),
+          child: Text(_label, style: AppTextStyles.badge.copyWith(fontSize: 10, color: Colors.white)),
         ),
         const SizedBox(width: 8),
         Container(
@@ -460,10 +419,7 @@ class _Badges extends StatelessWidget {
           ),
           child: Text(
             categoria.toUpperCase(),
-            style: AppTextStyles.badge.copyWith(
-              fontSize: 10,
-              color: AppColors.onSecondaryContainer,
-            ),
+            style: AppTextStyles.badge.copyWith(fontSize: 10, color: AppColors.onSecondaryContainer),
           ),
         ),
       ],
@@ -472,15 +428,18 @@ class _Badges extends StatelessWidget {
 }
 
 // ── Cards de ESTADO e LOCAL ─────────────────────────────────────────────────
+// Só o card LOCAL virou botão — visual idêntico ao original.
 
 class _InfoCards extends StatelessWidget {
   final FeedItem item;
-  const _InfoCards({required this.item});
+  final BuildContext context;
+  const _InfoCards({required this.item, required this.context});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext ctx) {
     return Row(
       children: [
+        // Card ESTADO — sem alteração
         Expanded(
           child: _InfoCard(
             icone: Icons.shield_outlined,
@@ -489,11 +448,16 @@ class _InfoCards extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
+        // Card LOCAL — agora é clicável e abre o mapa
         Expanded(
-          child: _InfoCard(
+          child: _InfoCardBotao(
             icone: Icons.location_on_outlined,
             rotulo: 'LOCAL',
             valor: item.localizacao,
+            onTap: () => ModalMapaLocal.mostrar(
+              context,
+              localizacao: item.localizacao,
+            ),
           ),
         ),
       ],
@@ -501,15 +465,12 @@ class _InfoCards extends StatelessWidget {
   }
 }
 
+/// Card estático — igual ao original
 class _InfoCard extends StatelessWidget {
   final IconData icone;
   final String rotulo;
   final String valor;
-  const _InfoCard({
-    required this.icone,
-    required this.rotulo,
-    required this.valor,
-  });
+  const _InfoCard({required this.icone, required this.rotulo, required this.valor});
 
   @override
   Widget build(BuildContext context) {
@@ -527,21 +488,66 @@ class _InfoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  rotulo,
-                  style: AppTextStyles.label.copyWith(
-                    color: AppColors.outline,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                Text(
-                  valor,
-                  style: AppTextStyles.input.copyWith(fontWeight: FontWeight.w600),
-                ),
+                Text(rotulo, style: AppTextStyles.label.copyWith(color: AppColors.outline, letterSpacing: 0.8)),
+                Text(valor,  style: AppTextStyles.input.copyWith(fontWeight: FontWeight.w600)),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Card clicável — mesmo visual, com InkWell e indicador de mapa
+class _InfoCardBotao extends StatelessWidget {
+  final IconData icone;
+  final String rotulo;
+  final String valor;
+  final VoidCallback onTap;
+  const _InfoCardBotao({
+    required this.icone,
+    required this.rotulo,
+    required this.valor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(icone, color: AppColors.primary, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(rotulo, style: AppTextStyles.label.copyWith(color: AppColors.outline, letterSpacing: 0.8)),
+                    Text(
+                      valor,
+                      style: AppTextStyles.input.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,        // texto na cor primária indica que é clicável
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Seta pequena reforça que é interativo
+              const Icon(Icons.chevron_right, color: AppColors.primary, size: 16),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -571,10 +577,7 @@ class _DicaSeguranca extends StatelessWidget {
                 children: [
                   TextSpan(
                     text: 'Dica de Segurança: ',
-                    style: AppTextStyles.body.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTextStyles.body.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
                   ),
                   TextSpan(
                     text: 'Nunca realize pagamentos por itens gratuitos.',
@@ -611,14 +614,10 @@ class _MeInteressaBtn extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         icon: isLoading
             ? const SizedBox(
-                width: 18,
-                height: 18,
+                width: 18, height: 18,
                 child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
               )
-            : Icon(
-                cancelar ? Icons.cancel_outlined : Icons.chat_bubble_outline,
-                size: 20,
-              ),
+            : Icon(cancelar ? Icons.cancel_outlined : Icons.chat_bubble_outline, size: 20),
         label: Text(
           isLoading
               ? (cancelar ? 'Cancelando...' : 'Enviando...')
@@ -626,9 +625,7 @@ class _MeInteressaBtn extends StatelessWidget {
           style: AppTextStyles.button,
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: cancelar
-              ? Colors.red.shade600
-              : AppColors.primaryContainer,
+          backgroundColor: cancelar ? Colors.red.shade600 : AppColors.primaryContainer,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

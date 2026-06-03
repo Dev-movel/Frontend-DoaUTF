@@ -69,7 +69,7 @@ class AuthInterceptor extends Interceptor {
   Future<void> _forceLogout() async {
     await AuthService.instance.logout();
     navigatorKey.currentState?.pushNamedAndRemoveUntil(
-      '/login',
+      '/home',
       (route) => false,
     );
   }

@@ -5,6 +5,7 @@ import '../screens/home_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/reset_password_screen.dart';
 import '../screens/create_donation_screen.dart';
+import '../screens/tela_mapa.dart';
 
 class AppRoutes {
   static Map<String, WidgetBuilder> get routes => {
@@ -12,6 +13,7 @@ class AppRoutes {
         '/home': (_) => const HomeScreen(),
         '/register': (_) => const SignUpScreen(),
         '/doar': (_) => const CreateDonationScreen(),
+        '/mapa': (_) => const TelaDoMapa(), 
       };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {

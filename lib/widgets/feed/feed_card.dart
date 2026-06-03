@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/feed_item.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
+import '../mapa/modal_mapa_local.dart';
 
 class FeedCard extends StatelessWidget {
   final FeedItem item;
@@ -69,14 +70,19 @@ class FeedCard extends StatelessWidget {
                                 onPressed: onOpenAgendamento,
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: AppColors.primary,
-                                  side: const BorderSide(color: AppColors.primary),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  side: const BorderSide(
+                                      color: AppColors.primary),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12),
                                 ),
                                 child: const Text('Ver agendamento'),
                               ),
                             ),
-                          if (onOpenAgendamento != null && onAcceptDirect != null)
+                          if (onOpenAgendamento != null &&
+                              onAcceptDirect != null)
                             const SizedBox(width: 8),
                           if (onAcceptDirect != null)
                             Expanded(
@@ -85,8 +91,11 @@ class FeedCard extends StatelessWidget {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12),
                                 ),
                                 child: const Text('Aceitar'),
                               ),
@@ -105,6 +114,8 @@ class FeedCard extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _Imagem extends StatelessWidget {
   final String? fotoUrl;
   final String status;
@@ -112,17 +123,23 @@ class _Imagem extends StatelessWidget {
 
   String get _label {
     switch (status.toLowerCase()) {
-      case 'reservado': return 'Reservado';
-      case 'doado': return 'Doado';
-      default: return 'Disponível';
+      case 'reservado':
+        return 'Reservado';
+      case 'doado':
+        return 'Doado';
+      default:
+        return 'Disponível';
     }
   }
 
   Color get _badgeColor {
     switch (status.toLowerCase()) {
-      case 'reservado': return Colors.orange;
-      case 'doado': return Colors.grey;
-      default: return AppColors.primary;
+      case 'reservado':
+        return Colors.orange;
+      case 'doado':
+        return Colors.grey;
+      default:
+        return AppColors.primary;
     }
   }
 
@@ -144,7 +161,8 @@ class _Imagem extends StatelessWidget {
           top: 8,
           left: 8,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: _badgeColor,
               borderRadius: BorderRadius.circular(12),
@@ -160,17 +178,22 @@ class _Imagem extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _Placeholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.containerHigh,
       child: const Center(
-        child: Icon(Icons.image_outlined, color: AppColors.outline, size: 32),
+        child:
+            Icon(Icons.image_outlined, color: AppColors.outline, size: 32),
       ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _CategoriaChip extends StatelessWidget {
   final String categoria;
@@ -191,6 +214,8 @@ class _CategoriaChip extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _DoadorRow extends StatelessWidget {
   final FeedItem item;
@@ -227,11 +252,41 @@ class _DoadorRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              Text(
-                '${item.localizacao} • ${item.tempoAtras}',
-                style: AppTextStyles.subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              // ── Localização (botão) + tempo ──────────────────────
+              Row(
+                children: [
+                  // Botão de localização — abre o modal do mapa
+                  GestureDetector(
+                    onTap: () => ModalMapaLocal.mostrar(
+                      context,
+                      localizacao: item.localizacao,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 12,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          item.localizacao,
+                          style: AppTextStyles.subtitle.copyWith(
+                            color: AppColors.primary,
+                            decoration: TextDecoration.underline,
+                            decorationColor: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Separador e tempo
+                  Text(
+                    ' • ${item.tempoAtras}',
+                    style: AppTextStyles.subtitle,
+                  ),
+                ],
               ),
             ],
           ),

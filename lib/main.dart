@@ -14,6 +14,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/feed_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/admin_dashboard.dart';
+import 'screens/tela_mapa.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -58,6 +59,7 @@ class MyApp extends StatelessWidget {
         '/profile': (_) => const ProfileScreen(),
         '/admin-dashboard': (_) => const AdminDashboardScreen(),
         '/feed': (_) => const FeedScreen(),
+        '/mapa': (_) => TelaDoMapa(),
       },
 
       onGenerateRoute: (RouteSettings settings) {
