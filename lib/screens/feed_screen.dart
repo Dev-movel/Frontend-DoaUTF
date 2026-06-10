@@ -288,8 +288,8 @@ class _FeedScreenState extends State<FeedScreen> {
                   crossAxisCount: colunas,
                   mainAxisSpacing: _espacamento,
                   crossAxisSpacing: _espacamento,
-                  // imagem quadrada (cardWidth) + área de conteúdo abaixo
-                  mainAxisExtent: cardWidth + 245,
+                  // ajusta altura para imagens maiores e garante proporção visual
+                  mainAxisExtent: 380,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (_, index) {
