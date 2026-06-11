@@ -44,65 +44,8 @@ class FeedCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.max,
                   children: [
                     _CategoriaChip(categoria: item.categoria),
-                    const SizedBox(height: 6),
-                    Text(
-                      item.titulo,
-                      style: AppTextStyles.featureTitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.descricao ?? '',
-                      style: AppTextStyles.body,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 12),
-                    _DoadorRow(item: item),
-                    if (onAcceptDirect != null || onOpenAgendamento != null) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          if (onOpenAgendamento != null)
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: onOpenAgendamento,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  side: const BorderSide(
-                                      color: AppColors.primary),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
-                                ),
-                                child: const Text('Ver agendamento'),
-                              ),
-                            ),
-                          if (onOpenAgendamento != null &&
-                              onAcceptDirect != null)
-                            const SizedBox(width: 8),
-                          if (onAcceptDirect != null)
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: onAcceptDirect,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
-                                ),
-                                child: const Text('Aceitar'),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
+                    const SizedBox(height: 8),
+                    _TituloELocalizacao(item: item),
                   ],
                 ),
               ),
@@ -114,86 +57,64 @@ class FeedCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 class _Imagem extends StatelessWidget {
   final String? fotoUrl;
   final String status;
+
   const _Imagem({required this.fotoUrl, required this.status});
-
-  String get _label {
-    switch (status.toLowerCase()) {
-      case 'reservado':
-        return 'Reservado';
-      case 'doado':
-        return 'Doado';
-      default:
-        return 'Disponível';
-    }
-  }
-
-  Color get _badgeColor {
-    switch (status.toLowerCase()) {
-      case 'reservado':
-        return Colors.orange;
-      case 'doado':
-        return Colors.grey;
-      default:
-        return AppColors.primary;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
+    final bool indisponivel = status.toLowerCase() != 'disponivel';
+
     return Stack(
       children: [
-        AspectRatio(
-          aspectRatio: 1.0,
-          child: fotoUrl != null
-              ? Image.network(
-                  fotoUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => _Placeholder(),
+        Container(
+          height: 260,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.containerHigh,
+            image: fotoUrl != null
+                ? DecorationImage(
+                    image: NetworkImage(fotoUrl!),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+          ),
+          child: fotoUrl == null
+              ? const Icon(
+                  Icons.image_not_supported_outlined,
+                  size: 60,
+                  color: AppColors.outline,
                 )
-              : _Placeholder(),
+              : null,
         ),
-        Positioned(
-          top: 8,
-          left: 8,
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: _badgeColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              _label,
-              style: AppTextStyles.badge.copyWith(color: Colors.white),
+        if (indisponivel)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.6),
+              alignment: Alignment.center,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  status.toUpperCase(),
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _Placeholder extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.containerHigh,
-      child: const Center(
-        child:
-            Icon(Icons.image_outlined, color: AppColors.outline, size: 32),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 class _CategoriaChip extends StatelessWidget {
   final String categoria;
@@ -202,96 +123,87 @@ class _CategoriaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.primary),
+        color: AppColors.primaryContainer.withOpacity(0.08),
         borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: AppColors.primaryContainer.withOpacity(0.15),
+          width: 1,
+        ),
       ),
       child: Text(
-        categoria.toUpperCase(),
-        style: AppTextStyles.label.copyWith(color: AppColors.primary),
+        categoria,
+        style: AppTextStyles.subtitle.copyWith(
+          color: AppColors.primaryContainer,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _DoadorRow extends StatelessWidget {
+class _TituloELocalizacao extends StatelessWidget {
   final FeedItem item;
-  const _DoadorRow({required this.item});
+  const _TituloELocalizacao({required this.item});
 
   @override
   Widget build(BuildContext context) {
-    final inicial = item.doadorNome.isNotEmpty
-        ? item.doadorNome[0].toUpperCase()
-        : '?';
-
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 14,
-          backgroundColor: AppColors.primary,
-          child: Text(
-            inicial,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            item.titulo,
+            style: AppTextStyles.cardTitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                item.doadorNome,
-                style: AppTextStyles.input,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              GestureDetector(
+                onTap: () => ModalMapaLocal.mostrar(
+                  context,
+                  localizacao: item.localizacao,
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 13,
+                      color: AppColors.primaryContainer,
+                    ),
+                    SizedBox(width: 2),
+                  ],
+                ),
               ),
-              // ── Localização (botão) + tempo ──────────────────────
-              Row(
-                children: [
-                  // Botão de localização — abre o modal do mapa
-                  GestureDetector(
-                    onTap: () => ModalMapaLocal.mostrar(
-                      context,
-                      localizacao: item.localizacao,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 12,
-                          color: AppColors.primary,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          item.localizacao,
-                          style: AppTextStyles.subtitle.copyWith(
-                            color: AppColors.primary,
-                            decoration: TextDecoration.underline,
-                            decorationColor: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => ModalMapaLocal.mostrar(
+                    context,
+                    localizacao: item.localizacao,
                   ),
-                  // Separador e tempo
-                  Text(
-                    ' • ${item.tempoAtras}',
-                    style: AppTextStyles.subtitle,
+                  child: Text(
+                    item.localizacao,
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: AppColors.primaryContainer,
+                      decoration: TextDecoration.underline,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
+                ),
+              ),
+              Text(
+                ' • ${item.tempoAtras}',
+                style: AppTextStyles.subtitle,
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

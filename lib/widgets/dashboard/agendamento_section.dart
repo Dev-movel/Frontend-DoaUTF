@@ -3,21 +3,20 @@ import 'package:intl/intl.dart';
 import 'package:dio/dio.dart'; 
 import '../../models/agendamento.dart';
 import '../../services/agendamento_service.dart';
+import '../../theme/app_colors.dart';
 import 'agendamento_status_badge.dart';
 import 'date_time_picker_helper.dart';
 
 class AgendamentoSection extends StatefulWidget {
   final int itemId;
-  final String itemStatus;
-  final int doadorId;
   final int usuarioId;
+  final VoidCallback? onRefresh;
 
   const AgendamentoSection({
     super.key,
     required this.itemId,
-    required this.itemStatus,
-    required this.doadorId,
     required this.usuarioId,
+    this.onRefresh,
   });
 
   @override
@@ -30,8 +29,8 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
   Agendamento? _agendamento;
   bool _loading = true;
 
-  bool get _isDoador => widget.usuarioId == widget.doadorId;
   bool get _isReceptor => _agendamento != null && widget.usuarioId == _agendamento!.receptorId;
+  bool get _isDoador => _agendamento != null && widget.usuarioId == _agendamento!.doadorId;
   bool get _isParticipante => _isDoador || _isReceptor;
   bool get _precisaConfirmar {
     if (_agendamento == null) return false;
@@ -39,9 +38,6 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
     if (_isReceptor) return !_agendamento!.confirmacaoReceptor;
     return false;
   }
-
-  final Color _primary = const Color(0xFF0D631B);
-  final Color _surfaceContainerLow = const Color(0xFFF3F3ED);
 
   @override
   void initState() {
@@ -54,7 +50,6 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
       final agendamento = await AgendamentoService.instance.getByItem(widget.itemId);
       if (mounted) setState(() => _agendamento = agendamento);
     } catch (e) {
-      // Erro tratado silenciosamente para manter o fluxo
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -65,38 +60,33 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: isError ? Colors.red.shade800 : _primary,
+        backgroundColor: isError ? Colors.red.shade800 : Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  Future<void> _processarAcao(Future<void> Function() acao) async {
+  Future<void> _processarAcao(Future<void> Function() acao, {String mensagemSucesso = 'Ação realizada com sucesso!'}) async {
     setState(() => _loading = true);
     try {
       await acao();
+      _mostrarMensagem(mensagemSucesso);
       await _carregarAgendamento();
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 422) {
-        _mostrarMensagem('A data e hora sugeridas não podem estar no passado.', isError: true);
-      } else if (e.response?.statusCode == 403) {
-        _mostrarMensagem('Ação proibida: você não faz parte deste agendamento.', isError: true);
-      } else {
-        _mostrarMensagem('Erro ao processar: ${e.message}', isError: true);
-      }
+      widget.onRefresh?.call();
     } catch (e) {
-      _mostrarMensagem('Erro inesperado: $e', isError: true);
+      _mostrarMensagem(e.toString().replaceAll('Exception: ', ''), isError: true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _acaoSugerirHorario() async {
-    final data = await DateTimePickerHelper.selecionarDataHora(context);
+    final data = await DateTimePickerHelper.selecionarDataHora(context);  
     if (data == null) return;
 
-    await _processarAcao(() => 
-      AgendamentoService.instance.sugerirHorario(widget.itemId, data)
+    await _processarAcao(
+      () => AgendamentoService.instance.sugerirHorario(widget.itemId, data),
+      mensagemSucesso: 'Sugestão de horário enviada com sucesso!',
     );
   }
 
@@ -104,8 +94,9 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
     final data = await DateTimePickerHelper.selecionarDataHora(context);
     if (data == null) return;
 
-    await _processarAcao(() => 
-      AgendamentoService.instance.proporDisponibilidade(widget.itemId, data)
+    await _processarAcao(
+      () => AgendamentoService.instance.proporDisponibilidade(widget.itemId, data),
+      mensagemSucesso: 'Sua janela de disponibilidade foi salva!',
     );
   }
 
@@ -115,7 +106,7 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
       return const Padding(
         padding: EdgeInsets.all(24.0),
         child: Center(
-          child: CircularProgressIndicator(color: Color(0xFF0D631B)),
+          child: CircularProgressIndicator(color: AppColors.primaryContainer),
         ),
       );
     }
@@ -124,26 +115,27 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
-        margin: const EdgeInsets.symmetric(vertical: 16),
+        margin: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.red.shade50,
+          color: Colors.orange.shade50,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.red.shade200),
+          border: Border.all(color: Colors.orange.shade200),
         ),
-        child: const Text(
-          '⚠️ O status atualizou para reservado, mas o backend não retornou o agendamento.\n\nVerifique se a rota GET /itens/{id}/agendamento está funcionando ou se o agendamento foi realmente criado no banco de dados.',
-          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+        child: Text(
+          'O item consta como reservado, mas os detalhes logísticos ainda não foram inicializados pelo servidor.',
+          style: TextStyle(color: Colors.orange.shade700, fontWeight: FontWeight.w600, fontSize: 13),
         ),
       );
     }
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 24),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _surfaceContainerLow,
+        color: AppColors.containerHigh.withOpacity(0.15),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.outlineVariant.withOpacity(0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,8 +146,8 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
               const Text(
                 'Logística de Retirada',
                 style: TextStyle(
-                  color: Color(0xFF1A1C19),
-                  fontSize: 18,
+                  color: AppColors.onSurface,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -168,7 +160,7 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
           if (_agendamento == null) ...[
             Text(
               'Item reservado! Inicie o agendamento para combinar a entrega.',
-              style: TextStyle(color: Colors.grey.shade700),
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
             ),
             const SizedBox(height: 16),
             if (!_isDoador)
@@ -184,13 +176,25 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
               ),
           ] else ...[
             if (_agendamento!.dataHora != null) ...[
-              const Text('Horário Sugerido:', style: TextStyle(fontWeight: FontWeight.w600)),
-              Text(_fmt.format(_agendamento!.dataHora!)),
+              Text(
+                _agendamento!.status == AgendamentoStatus.concluido
+                  ? 'Horário em que a doação foi concluída:'
+                  : 'Horário em Negociação:',
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.outline),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.access_time, size: 16, color: AppColors.primaryContainer),
+                  const SizedBox(width: 8),
+                  Text(_fmt.format(_agendamento!.dataHora!), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.onSurface)),
+                ],
+              ),
               const SizedBox(height: 16),
             ] else ...[
               Text(
                 'Nenhum horário definido ainda. Sugira um horário ou defina disponibilidade para o agendamento.',
-                style: TextStyle(color: Colors.grey.shade700),
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
               ),
               const SizedBox(height: 16),
               if (_isDoador)
@@ -202,8 +206,8 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
               if (_isReceptor)
                 _ActionButton(
                   label: 'Sugerir Horário',
-                  isSecundario: true,
                   onPressed: _acaoSugerirHorario,
+                  isSecundario: true,
                 ),
             ],
 
@@ -211,19 +215,34 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
               if (_precisaConfirmar) ...[
                 _ActionButton(
                   label: 'Confirmar Horário',
-                  onPressed: () => _processarAcao(() => AgendamentoService.instance.confirmarAgendamento(widget.itemId)),
+                  onPressed: () => _processarAcao(
+                    () => AgendamentoService.instance.confirmarAgendamento(widget.itemId),
+                    mensagemSucesso: 'Horário confirmado por ambas as partes!',
+                  ),
                 ),
                 const SizedBox(height: 8),
               ] else if (_isParticipante) ...[
-                Text(
-                  'Aguardando confirmação do outro participante.',
-                  style: TextStyle(color: Colors.grey.shade700),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                  child: Row(
+                    children: [
+                      Icon(Icons.hourglass_empty, size: 16, color: Colors.blue.shade800),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Aguardando a confirmação do outro usuário.',
+                          style: TextStyle(color: Colors.blue.shade900, fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
               ] else ...[
                 Text(
                   'Apenas o doador ou o receptor deste agendamento pode confirmar o horário.',
-                  style: TextStyle(color: Colors.grey.shade700),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
               ],
@@ -236,17 +255,19 @@ class _AgendamentoSectionState extends State<AgendamentoSection> {
               if (_isDoador)
                 _ActionButton(
                   label: 'Definir Outro Horário',
-                  isSecundario: true,
                   onPressed: _acaoProporDisponibilidade,
+                  isSecundario: true,
                 ),
             ],
 
-            if (_agendamento!.status == AgendamentoStatus.confirmado && _isDoador) ...[
-               _ActionButton(
+            if (_agendamento!.status == AgendamentoStatus.confirmado && _isDoador)
+              _ActionButton(
                 label: 'Concluir Entrega',
-                onPressed: () => _processarAcao(() => AgendamentoService.instance.concluirEntrega(widget.itemId)),
+                onPressed: () => _processarAcao(
+                  () => AgendamentoService.instance.concluirEntrega(widget.itemId),
+                  mensagemSucesso: 'Excelente! Entrega finalizada e registrada no ecossistema.',
+                ),
               ),
-            ]
           ],
         ],
       ),
@@ -267,30 +288,28 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF0D631B);
-
     return SizedBox(
       width: double.infinity,
-      height: 48,
+      height: 44,
       child: isSecundario
           ? OutlinedButton(
               style: OutlinedButton.styleFrom(
-                foregroundColor: primaryColor,
-                side: BorderSide(color: primaryColor, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                foregroundColor: AppColors.primaryContainer,
+                side: const BorderSide(color: AppColors.primaryContainer, width: 1.2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: onPressed,
-              child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             )
           : ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
+                backgroundColor: AppColors.primaryContainer,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: onPressed,
-              child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             ),
     );
   }

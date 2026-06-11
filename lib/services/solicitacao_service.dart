@@ -5,6 +5,9 @@ import '../auth/services/token_storage.dart';
 class SolicitacaoException implements Exception {
   final String message;
   const SolicitacaoException(this.message);
+
+  @override
+  String toString() => message;
 }
 
 class SolicitacaoService {
@@ -68,6 +71,7 @@ class SolicitacaoService {
     } on DioException catch (e) {
       debugPrint('❌ [DELETE /solicitacoes/$solicitacaoId] ${e.response?.statusCode} – ${e.response?.data}');
       throw SolicitacaoException(switch (e.response?.statusCode) {
+        400 => 'Esta solicitação não está mais pendente.',
         403 => 'Sem permissão para cancelar esta solicitação.',
         404 => 'Solicitação não encontrada.',
         _   => 'Erro ao cancelar solicitação. Tente novamente.',
@@ -104,6 +108,7 @@ Future<List<dynamic>> buscarSolicitacoesDoItem(int itemId) async {
         401 => 'Sessão expirada. Faça login novamente.',
         403 => 'Você não tem permissão para aceitar esta solicitação.',
         404 => 'Solicitação não encontrada.',
+        422 => 'Este item não está mais disponível para doação.',
         _   => 'Erro ao aceitar solicitação. Tente novamente.',
       });
     }

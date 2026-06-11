@@ -17,11 +17,25 @@ class StatusBadge extends StatelessWidget {
         textColor = AppColors.statusAguardandoText;
         break;
       case 'ANUNCIADO':
+      case 'DISPONÍVEL':
+      case 'DISPONIVEL':
         bgColor = AppColors.statusAnunciadoBg;
         textColor = AppColors.statusAnunciadoText;
         break;
+      case 'RESERVADO':
+      case 'RESERVA':
+      case 'PENDENTE':
+      case 'AGENDADO':
+        bgColor = AppColors.statusAguardandoBg;
+        textColor = AppColors.statusAguardandoText;
+        break;
+      case 'CONFIRMADO':
+        bgColor = AppColors.statusConcluidoBg;
+        textColor = AppColors.statusConcluidoText;
+        break;
       case 'CONCLUÍDO':
       case 'CONCLUIDO':
+      case 'DOADO':
         bgColor = AppColors.statusConcluidoBg;
         textColor = AppColors.statusConcluidoText;
         break;

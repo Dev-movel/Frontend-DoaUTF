@@ -128,7 +128,20 @@ class UsuarioService {
       throw Exception(_extractError(e) ?? 'Erro ao buscar agendamentos.');
     }
   }
-
+  Future<Usuario> getUsuarioById(int id) async {
+    try {
+      // rota pública que retorna todos os usuários; filtrar localmente pelo id
+      final response = await _dio.get('/usuarios');
+      final list = response.data is List ? response.data as List<dynamic> : (response.data['usuarios'] ?? []);
+      final found = list.cast<Map<String, dynamic>>().firstWhere((u) => (u['id']?.toString() ?? '') == id.toString(), orElse: () => {});
+      if (found.isEmpty) throw Exception('Usuário não encontrado');
+      debugPrint('[GET /usuarios] Usuário carregado: ${found}');
+      return Usuario.fromJson(found);
+    } on DioException catch (e) {
+      debugPrint('[GET /usuarios] Erro: ${e.response?.data}');
+      throw Exception(_extractError(e) ?? 'Erro ao buscar usuário.');
+    }
+  }
   String? _extractError(DioException e) {
     if (e.response?.data is Map<String, dynamic>) {
       return e.response?.data['erro'];

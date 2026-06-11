@@ -12,15 +12,15 @@ extension AgendamentoStatusX on AgendamentoStatus {
 
   static const Map<AgendamentoStatus, int> _colors = {
     AgendamentoStatus.pendente:   0xFFFFF3E0,
-    AgendamentoStatus.confirmado: 0xFFE8F5E9, 
-    AgendamentoStatus.concluido:  0xFFE3F2FD, 
-    AgendamentoStatus.cancelado:  0xFFF5F5F5, 
+    AgendamentoStatus.confirmado: 0xFFE8F5E9,
+    AgendamentoStatus.concluido:  0xFFE8F5E9,
+    AgendamentoStatus.cancelado: 0xFFF5F5F5,
   };
 
   static const Map<AgendamentoStatus, int> _textColors = {
     AgendamentoStatus.pendente:   0xFFF57C00,
     AgendamentoStatus.confirmado: 0xFF2E7D32,
-    AgendamentoStatus.concluido:  0xFF1565C0,
+    AgendamentoStatus.concluido:  0xFF1B5E20,
     AgendamentoStatus.cancelado:  0xFF757575,
   };
 
