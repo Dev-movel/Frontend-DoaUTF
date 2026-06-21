@@ -15,6 +15,7 @@ import 'screens/feed_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/tela_mapa.dart';
+import 'screens/notificacoes_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -60,6 +61,7 @@ class MyApp extends StatelessWidget {
         '/admin-dashboard': (_) => const AdminDashboardScreen(),
         '/feed': (_) => const FeedScreen(),
         '/mapa': (_) => TelaDoMapa(),
+        '/notificacoes': (_) => const NotificacoesScreen(),
       },
 
       onGenerateRoute: (RouteSettings settings) {

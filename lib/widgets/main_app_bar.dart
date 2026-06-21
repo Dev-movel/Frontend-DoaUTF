@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/usuario.dart';
 import '../services/usuario_service.dart';
+import '../services/notificacao_service.dart';
 import '../auth/services/token_storage.dart';
 import '../auth/services/auth_service.dart';
 import '../theme/app_colors.dart';
+import '../screens/notificacoes_screen.dart';
 
 enum _MenuOpcao { perfil, sair }
 
@@ -27,6 +29,7 @@ class MainAppBar extends StatefulWidget implements PreferredSizeWidget {
 class _MainAppBarState extends State<MainAppBar> {
   Usuario? _usuario;
   bool _autenticado = false;
+  int _qtdNaoLidas = 0;
 
   @override
   void initState() {
@@ -41,16 +44,44 @@ class _MainAppBarState extends State<MainAppBar> {
       return;
     }
     try {
-      final user = await UsuarioService.instance.getMe();
+      final results = await Future.wait([
+        UsuarioService.instance.getMe(),
+        NotificacaoService.instance.contarNaoLidas(),
+      ]);
       if (mounted) {
         setState(() {
-          _usuario = user;
+          _usuario = results[0] as Usuario;
+          _qtdNaoLidas = results[1] as int;
           _autenticado = true;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _autenticado = false);
     }
+  }
+
+  Future<void> _abrirNotificacoes() async {
+    final isMobile = MediaQuery.of(context).size.width < 700;
+
+    if (isMobile) {
+      await Navigator.pushNamed(context, '/notificacoes');
+    } else {
+      await showDialog<void>(
+        context: context,
+        builder: (_) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(
+            width: 480,
+            height: MediaQuery.of(context).size.height * 0.75,
+            child: const NotificacoesScreen(isDialog: true),
+          ),
+        ),
+      );
+    }
+
+    if (!mounted) return;
+    final count = await NotificacaoService.instance.contarNaoLidas();
+    if (mounted) setState(() => _qtdNaoLidas = count);
   }
 
   TextStyle _navStyle(String route) {
@@ -144,7 +175,40 @@ class _MainAppBarState extends State<MainAppBar> {
 
           // ── Notificação + avatar com dropdown: só quando autenticado ─────
           if (_autenticado) ...[
-            const Icon(Icons.notifications_none, color: AppColors.onSurface),
+            GestureDetector(
+              onTap: _abrirNotificacoes,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    _qtdNaoLidas > 0
+                        ? Icons.notifications
+                        : Icons.notifications_none,
+                    color: AppColors.onSurface,
+                  ),
+                  if (_qtdNaoLidas > 0)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          _qtdNaoLidas > 99 ? '99+' : '$_qtdNaoLidas',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
             const SizedBox(width: 10),
             PopupMenuButton<_MenuOpcao>(
               offset: const Offset(0, 44),
