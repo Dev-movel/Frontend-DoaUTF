@@ -154,11 +154,31 @@ class _TituloELocalizacao extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            item.titulo,
-            style: AppTextStyles.cardTitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.titulo,
+                style: AppTextStyles.cardTitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Icon(Icons.person_outline, size: 13, color: AppColors.outline),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Doado por ${item.doadorNome}',
+                      style: AppTextStyles.subtitle.copyWith(color: AppColors.outline),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           Row(
             children: [
