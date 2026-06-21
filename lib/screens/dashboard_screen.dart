@@ -1,15 +1,16 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../services/usuario_service.dart';
+import '../services/avaliacao_service.dart';
 import '../widgets/main_app_bar.dart';
 import '../widgets/donation_card.dart';
-import '../models/usuario.dart';
-import '../models/doacao.dart';
 import '../widgets/dashboard/status_filter_row.dart';
 import '../widgets/dashboard/agendamento_section.dart';
 import '../widgets/dashboard/gerenciador_solicitacoes.dart';
+import '../widgets/dashboard/avaliacao_bottom_sheet.dart';
+import '../models/doacao.dart';
+import '../models/usuario.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -33,6 +34,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final List<String> _filtrosStatus = ['Todos', 'Disponíveis', 'Reservados', 'Doados'];
   bool _isLoadingDoacoes = false;
   int _totalItensDoadosContador = 0;
+  double? _mediaAvaliacoes;
+  int _totalAvaliacoes = 0;
 
   int _safelyParseInt(dynamic value) {
   if (value == null) return 0;
@@ -106,6 +109,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _meusAgendamentos = agendamentos;
         _receivedFotos = fotoMap;
       });
+
+      try {
+        final reputacao = await AvaliacaoService.instance.minhaReputacao();
+        if (mounted) {
+          setState(() {
+            _mediaAvaliacoes = (reputacao['media_avaliacoes'] as num?)?.toDouble();
+            _totalAvaliacoes = (reputacao['total_avaliacoes'] as num?)?.toInt() ?? 0;
+          });
+        }
+      } catch (e) {
+        debugPrint('Erro ao carregar reputação: $e');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -184,17 +199,29 @@ return Scaffold(
 
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final cols = constraints.maxWidth > 1000 ? 2 : 1;
-                      final spacing = constraints.maxWidth > 600 ? 24.0 : 16.0;
+                      final cols = 3;
+                      final spacing = constraints.maxWidth > 600 ? 24.0 : 8.0;
                       final totalSpacing = spacing * (cols - 1);
-                      final cardWidth = min((constraints.maxWidth - totalSpacing) / cols, 460.0);
-                      return Wrap(
-                        alignment: WrapAlignment.start,
-                        spacing: spacing,
-                        runSpacing: spacing,
+                      final cardWidth = (constraints.maxWidth - totalSpacing) / cols;
+
+                      final String notaTexto = _totalAvaliacoes > 0 && _mediaAvaliacoes != null
+                          ? '${_mediaAvaliacoes!.toStringAsFixed(1)}'
+                          : 'N/A';
+
+                      final String labelDoados = isMobile ? 'DOADOS' : 'ITENS DOADOS';
+                      final String labelRecebidos = isMobile ? 'RECEBIDOS' : 'ITENS RECEBIDOS';
+                      final String labelReputacao = _totalAvaliacoes > 0
+                          ? (isMobile ? 'REPUTAÇÃO' : 'MINHA REPUTAÇÃO ($_totalAvaliacoes)')
+                          : (isMobile ? 'REPUTAÇÃO' : 'MINHA REPUTAÇÃO');
+                      
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildStatCard('$_totalItensDoadosContador', 'ITENS DOADOS', Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth, isMobile),
-                          _buildStatCard('$_itensRecebidos', 'ITENS RECEBIDOS', Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth, isMobile),
+                          _buildStatCard('$_totalItensDoadosContador', labelDoados, Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth, isMobile),
+                          SizedBox(width: spacing),
+                          _buildStatCard('$_itensRecebidos', labelRecebidos, Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth, isMobile),
+                          SizedBox(width: spacing),
+                          _buildStatCard(notaTexto, labelReputacao, Icons.star, Colors.amber[700]!, Colors.white, cardWidth, isMobile),
                         ],
                       );
                     }
@@ -274,6 +301,10 @@ return Scaffold(
                                   infoTexto = 'Disponível para doação\nLocal: ${localEntrega ?? "A combinar"}';
                                 }
 
+                                final bool jaAvaliou = agendamento?['ja_avaliou'] == true || doacao.jaAvaliou == true; 
+                                final bool prazoExpirado = agendamento?['prazo_expirado'] == true || doacao.prazoExpirado == true;
+                                final bool mostrarAvaliar = isDoado && !jaAvaliou && !prazoExpirado;
+
                                 return _buildOrderItemInterative(
                                   doacao.titulo,
                                   infoTexto,
@@ -286,6 +317,8 @@ return Scaffold(
                                   parceiroNome: receptorNome,
                                   souODoador: true,
                                   onRefresh: _carregarDados,
+                                  mostrarBotaoAvaliar: mostrarAvaliar,
+                                  onAvaliar: () => _abrirAvaliacao(doacao.id, receptorNome ?? "Parceiro"),
                                   onTapOverride: statusStr.contains('dispon') ? () => _abrirSolicitacoesDoItem(
                                     doacao.id,
                                     doacao.titulo,
@@ -326,6 +359,11 @@ return Scaffold(
                                   infoTexto = 'Doador: $nomeOutraPessoa\nLocal: $localEntrega';
                                 }
 
+                                final bool jaAvaliou = ag['ja_avaliou'] == true;
+                                final bool isConcluido = statusStr == 'concluido' || statusStr == 'doado';
+                                final bool prazoExpirado = ag['prazo_expirado'] == true;  
+                                final bool mostrarAvaliar = isConcluido && !jaAvaliou && !prazoExpirado;
+
                                 return _buildOrderItemInterative(
                                   ag['item_titulo'] ?? 'Item',
                                   infoTexto,
@@ -338,6 +376,8 @@ return Scaffold(
                                   parceiroNome: nomeOutraPessoa,
                                   souODoador: souODoador,
                                   onRefresh: _carregarDados,
+                                  mostrarBotaoAvaliar: mostrarAvaliar,
+                                  onAvaliar: () => _abrirAvaliacao(itemId ?? 0, nomeOutraPessoa),
                                 );
                               }),
                           ],
@@ -475,8 +515,22 @@ return Scaffold(
     return AppColors.onSurface;
   }
 
-  Widget _buildOrderItemInterative(String title, String info, String status, Color statusCol, {String? fotoUrl, required int itemId, required int usuarioId, String? localEntrega, String? parceiroNome, bool souODoador = false, required VoidCallback onRefresh, VoidCallback? onTapOverride,}) {
-    final bool isDisponivel = status.toLowerCase().contains('disponiv');
+  Widget _buildOrderItemInterative(
+    String title, 
+    String info, 
+    String status, 
+    Color statusCol, {
+    String? fotoUrl, 
+    required int itemId, 
+    required int usuarioId, 
+    String? localEntrega, 
+    String? parceiroNome, 
+    bool souODoador = false, 
+    required VoidCallback onRefresh, 
+    VoidCallback? onTapOverride,
+    bool mostrarBotaoAvaliar = false, 
+    VoidCallback? onAvaliar,          
+  }) {
     return Card(
       color: AppColors.surface,
       elevation: 0,
@@ -520,14 +574,27 @@ return Scaffold(
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusCol,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(status, style: TextStyle(color: _getStatusTextColor(status), fontSize: 11, fontWeight: FontWeight.bold)),
-              ),
+              mostrarBotaoAvaliar
+                  ? ElevatedButton(
+                      onPressed: onAvaliar,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        minimumSize: Size.zero,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('AVALIAR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusCol,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(status, style: TextStyle(color: _getStatusTextColor(status), fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
             ],
           ),
         ),
@@ -690,6 +757,21 @@ return Scaffold(
           Text(time, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.onSurface)),
         ])),
       ]),
+    );
+  }
+
+    Future<void> _abrirAvaliacao(int itemId, String parceiroNome) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, 
+      builder: (_) => AvaliacaoBottomSheet(
+        itemId: itemId,
+        usuarioParaBreviarNome: parceiroNome,
+        onSuccess: () {
+          _carregarDados(); 
+        },
+      ),
     );
   }
 }

@@ -27,6 +27,9 @@ class Doacao {
   final int quantidadeSolicitacoesPendentes;
   final AgendamentoResumo? agendamentoAtivo;
 
+  final bool jaAvaliou;
+  final bool prazoExpirado;
+
   static const String _backendBaseUrl = 'http://localhost:3000';
 
   Doacao({
@@ -36,6 +39,8 @@ class Doacao {
     required this.status,
     this.quantidadeSolicitacoesPendentes = 0,
     this.agendamentoAtivo,
+    this.jaAvaliou = false,
+    this.prazoExpirado = false,
   });
 
   factory Doacao.fromJson(Map<String, dynamic> json) {
@@ -49,6 +54,8 @@ class Doacao {
       agendamentoAtivo: json['agendamento_ativo'] != null
           ? AgendamentoResumo.fromJson(json['agendamento_ativo'])
           : null,
+      jaAvaliou: json['ja_avaliou'] == true,
+      prazoExpirado: json['prazo_expirado'] == true,
     );
   }
 
