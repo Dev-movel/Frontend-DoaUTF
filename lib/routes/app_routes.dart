@@ -6,6 +6,7 @@ import '../screens/forgot_password_screen.dart';
 import '../screens/reset_password_screen.dart';
 import '../screens/create_donation_screen.dart';
 import '../screens/tela_mapa.dart';
+import '../screens/notificacoes_screen.dart';
 
 class AppRoutes {
   static Map<String, WidgetBuilder> get routes => {
@@ -13,7 +14,8 @@ class AppRoutes {
         '/home': (_) => const HomeScreen(),
         '/register': (_) => const SignUpScreen(),
         '/doar': (_) => const CreateDonationScreen(),
-        '/mapa': (_) => const TelaDoMapa(), 
+        '/mapa': (_) => const TelaDoMapa(),
+        '/notificacoes': (_) => const NotificacoesScreen(),
       };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
