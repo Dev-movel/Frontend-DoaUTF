@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
@@ -184,16 +183,12 @@ return Scaffold(
 
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final cols = constraints.maxWidth > 1000 ? 2 : 1;
-                      final spacing = constraints.maxWidth > 600 ? 24.0 : 16.0;
-                      final totalSpacing = spacing * (cols - 1);
-                      final cardWidth = min((constraints.maxWidth - totalSpacing) / cols, 460.0);
-                      return Wrap(
-                        alignment: WrapAlignment.start,
-                        spacing: spacing,
-                        runSpacing: spacing,
+                      const spacing = 12.0;
+                      final cardWidth = (constraints.maxWidth - spacing) / 2;
+                      return Row(
                         children: [
                           _buildStatCard('$_totalItensDoadosContador', 'ITENS DOADOS', Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth, isMobile),
+                          const SizedBox(width: spacing),
                           _buildStatCard('$_itensRecebidos', 'ITENS RECEBIDOS', Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth, isMobile),
                         ],
                       );
@@ -207,6 +202,7 @@ return Scaffold(
                       Expanded(
                         flex: 2,
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildSectionHeader(
                               'Minhas Doações',
@@ -418,15 +414,15 @@ return Scaffold(
   }
 
   Widget _buildStatCard(String value, String label, IconData icon, Color bg, Color textCol, double width, bool isMobile) {
-    final padding = isMobile ? 16.0 : 18.0;
-    final spacing = isMobile ? 12.0 : 14.0;
-    final valueSize = isMobile ? 36.0 : 42.0;
-    final labelSize = isMobile ? 11.0 : 12.0;
+    final padding = isMobile ? 12.0 : 18.0;
+    final spacing = isMobile ? 8.0 : 14.0;
+    final valueSize = isMobile ? 26.0 : 42.0;
+    final labelSize = isMobile ? 10.0 : 12.0;
 
     return Container(
       width: width,
       padding: EdgeInsets.all(padding),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(isMobile ? 12 : 16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
