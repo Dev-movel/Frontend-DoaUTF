@@ -16,6 +16,7 @@ import 'screens/profile_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/tela_mapa.dart';
 import 'screens/notificacoes_screen.dart';
+import 'screens/chat_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -30,7 +31,7 @@ Future<void> main() async {
     baseUrl: 'http://localhost:3000',
   );
 
-  final hasSession = await TokenStorage.instance.hasTokens();
+  await TokenStorage.instance.hasTokens();
 
   runApp(const MyApp(initialRoute: '/home'));
 }
@@ -39,9 +40,9 @@ class MyApp extends StatelessWidget {
   final String initialRoute;
 
   const MyApp({
-    Key? key,
+    super.key,
     required this.initialRoute,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -76,8 +77,7 @@ class MyApp extends StatelessWidget {
             barrierDismissible: true,
             barrierColor: Colors.black54,
             transitionDuration: const Duration(milliseconds: 300),
-            pageBuilder: (_, __, ___) =>
-                ResetPasswordScreen(token: token),
+            pageBuilder: (_, __, ___) => ResetPasswordScreen(token: token),
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(
                 opacity: animation,
@@ -95,14 +95,27 @@ class MyApp extends StatelessWidget {
             barrierDismissible: true,
             barrierColor: Colors.black54,
             transitionDuration: const Duration(milliseconds: 300),
-            pageBuilder: (_, __, ___) =>
-                const ForgotPasswordScreen(),
+            pageBuilder: (_, __, ___) => const ForgotPasswordScreen(),
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(
                 opacity: animation,
                 child: child,
               );
             },
+          );
+        }
+
+        // CHAT (tela dedicada)
+        if (settings.name == '/chat') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => ChatScreen(
+              solicitacaoId: args['solicitacaoId'] as int,
+              meuId: args['meuId'] as int,
+              nomeOutroUsuario: args['nomeOutroUsuario'] as String,
+              tituloItem: args['tituloItem'] as String,
+            ),
           );
         }
 

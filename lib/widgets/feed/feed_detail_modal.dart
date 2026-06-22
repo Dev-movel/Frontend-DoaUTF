@@ -209,10 +209,24 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                           textAlign: TextAlign.center,
                         ),
                       )
+                    else if (_solicitacaoId != null)
+                      _AcoesInteressadoRow(
+                        isLoading: _isActionLoading,
+                        onCancelar: _alternarInteresse,
+                        onChat: () {
+                          final nav = Navigator.of(context, rootNavigator: true);
+                          nav.pop();
+                          nav.pushNamed('/chat', arguments: {
+                            'solicitacaoId': _solicitacaoId,
+                            'meuId': _meuId ?? 0,
+                            'nomeOutroUsuario': item.doadorNome,
+                            'tituloItem': item.titulo,
+                          });
+                        },
+                      )
                     else
                       _MeInteressaBtn(
                         isLoading: _isActionLoading,
-                        cancelar: _solicitacaoId != null,
                         onPressed: _alternarInteresse,
                       ),
                   ],
@@ -365,12 +379,10 @@ class _BotaoLocalizacao extends StatelessWidget {
 
 class _MeInteressaBtn extends StatelessWidget {
   final bool isLoading;
-  final bool cancelar;
   final VoidCallback onPressed;
-  
+
   const _MeInteressaBtn({
     required this.isLoading,
-    required this.cancelar,
     required this.onPressed,
   });
 
@@ -386,20 +398,78 @@ class _MeInteressaBtn extends StatelessWidget {
                 width: 18, height: 18,
                 child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
               )
-            : Icon(cancelar ? Icons.cancel_outlined : Icons.chat_bubble_outline, size: 20),
+            : const Icon(Icons.favorite_border, size: 20),
         label: Text(
-          isLoading
-              ? (cancelar ? 'Cancelando...' : 'Enviando...')
-              : (cancelar ? 'Cancelar Solicitação' : 'Me Interessa!'),
+          isLoading ? 'Enviando...' : 'Me Interessa!',
           style: AppTextStyles.button,
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: cancelar ? Colors.red.shade600 : AppColors.primaryContainer,
+          backgroundColor: AppColors.primaryContainer,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
+    );
+  }
+}
+
+class _AcoesInteressadoRow extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onCancelar;
+  final VoidCallback onChat;
+
+  const _AcoesInteressadoRow({
+    required this.isLoading,
+    required this.onCancelar,
+    required this.onChat,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: isLoading ? null : onCancelar,
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cancel_outlined, size: 18),
+              label: Text(
+                isLoading ? 'Cancelando...' : 'Cancelar',
+                style: AppTextStyles.button.copyWith(color: Colors.red.shade600, fontSize: 14),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red.shade600,
+                side: BorderSide(color: Colors.red.shade300),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: onChat,
+              icon: const Icon(Icons.chat_bubble_outline, size: 18),
+              label: Text('Conversar', style: AppTextStyles.button.copyWith(fontSize: 14)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryContainer,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
