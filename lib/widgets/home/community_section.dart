@@ -67,7 +67,7 @@ class HomeFooter extends StatelessWidget {
           const Divider(),
           const SizedBox(height: 20),
           Text(
-            '© 2024 DoaUTF - Tecnologia para o Bem Comum',
+            '© 2026 DoaUTF - Tecnologia para o Bem Comum',
             style: TextStyle(color: Colors.grey[600]),
           ),
         ],

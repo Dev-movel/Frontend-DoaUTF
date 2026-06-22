@@ -3,11 +3,15 @@ import '../../services/solicitacao_service.dart';
 
 class GerenciadorSolicitacoesWidget extends StatefulWidget {
   final int itemId;
+  final int meuId;
+  final String tituloItem;
   final VoidCallback onSolicitacaoAceita;
 
   const GerenciadorSolicitacoesWidget({
     super.key,
     required this.itemId,
+    required this.meuId,
+    required this.tituloItem,
     required this.onSolicitacaoAceita,
   });
 
@@ -123,34 +127,89 @@ class _GerenciadorSolicitacoesWidgetState extends State<GerenciadorSolicitacoesW
                 color: const Color(0xFFF3F3ED),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          nome,
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A1C19)),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: const Color(0xFF0D631B),
+                        child: Text(
+                          nome.isNotEmpty ? nome[0].toUpperCase() : '?',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Deseja receber esta doação',
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nome,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1A1C19)),
+                            ),
+                            Text(
+                              'Deseja receber esta doação',
+                              style: TextStyle(
+                                  color: Colors.grey.shade600, fontSize: 12),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0D631B),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () => _aceitar(solicitacao['id']),
-                    child: const Text('Aceitar', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            final nav = Navigator.of(context, rootNavigator: true);
+                            nav.pop();
+                            nav.pushNamed(
+                              '/chat',
+                              arguments: {
+                                'solicitacaoId': solicitacao['id'] as int,
+                                'meuId': widget.meuId,
+                                'nomeOutroUsuario': nome,
+                                'tituloItem': widget.tituloItem,
+                              },
+                            );
+                          },
+                          icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                          label: const Text('Conversar'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF0D631B),
+                            side: const BorderSide(color: Color(0xFF0D631B)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D631B),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          onPressed: () => _aceitar(solicitacao['id']),
+                          child: const Text('Aceitar',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

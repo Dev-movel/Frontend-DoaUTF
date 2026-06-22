@@ -52,7 +52,7 @@ class _ConteudoModalMapaState extends State<_ConteudoModalMapa>
 
   @override
   Widget build(BuildContext context) {
-    final double alturaModal = MediaQuery.of(context).size.height * 0.85;
+    final double alturaModal = MediaQuery.of(context).size.height * 0.95;
 
     return Container(
       height: alturaModal,

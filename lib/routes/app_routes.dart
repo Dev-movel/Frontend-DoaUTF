@@ -6,6 +6,7 @@ import '../screens/forgot_password_screen.dart';
 import '../screens/reset_password_screen.dart';
 import '../screens/create_donation_screen.dart';
 import '../screens/tela_mapa.dart';
+import '../screens/chat_screen.dart';
 
 class AppRoutes {
   static Map<String, WidgetBuilder> get routes => {
@@ -30,6 +31,20 @@ class AppRoutes {
     // Rota de Forgot Password (clique no login)
     if (name == '/forgot-password') {
       return _createModalRoute(const ForgotPasswordScreen(), settings);
+    }
+
+    // Rota de Chat entre doador e interessado
+    if (name == '/chat') {
+      final args = settings.arguments as Map<String, dynamic>;
+      return MaterialPageRoute(
+        settings: settings,
+        builder: (_) => ChatScreen(
+          solicitacaoId: args['solicitacaoId'] as int,
+          meuId: args['meuId'] as int,
+          nomeOutroUsuario: args['nomeOutroUsuario'] as String,
+          tituloItem: args['tituloItem'] as String,
+        ),
+      );
     }
 
     return null;

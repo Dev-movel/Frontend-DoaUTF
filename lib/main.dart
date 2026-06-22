@@ -15,6 +15,7 @@ import 'screens/feed_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/tela_mapa.dart';
+import 'screens/chat_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -101,6 +102,20 @@ class MyApp extends StatelessWidget {
                 child: child,
               );
             },
+          );
+        }
+
+        // CHAT entre doador e interessado
+        if (settings.name == '/chat') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => ChatScreen(
+              solicitacaoId: args['solicitacaoId'] as int,
+              meuId: args['meuId'] as int,
+              nomeOutroUsuario: args['nomeOutroUsuario'] as String,
+              tituloItem: args['tituloItem'] as String,
+            ),
           );
         }
 
