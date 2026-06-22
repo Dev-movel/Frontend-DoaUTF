@@ -46,7 +46,7 @@ class FeedItem {
 
   factory FeedItem.fromJson(Map<String, dynamic> json) {
     return FeedItem(
-      id: json['id'] as int,
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
       titulo: json['titulo'] ?? 'Sem título',
       fotos: _parseFotos(json['fotos']),
       status: json['status'] ?? 'ANUNCIADO',

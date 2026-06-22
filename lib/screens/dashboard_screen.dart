@@ -234,6 +234,7 @@ return Scaffold(
                       Expanded(
                         flex: 2,
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildSectionHeader(
                               'Minhas Doações',
@@ -458,15 +459,15 @@ return Scaffold(
   }
 
   Widget _buildStatCard(String value, String label, IconData icon, Color bg, Color textCol, double width, bool isMobile) {
-    final padding = isMobile ? 16.0 : 18.0;
-    final spacing = isMobile ? 12.0 : 14.0;
-    final valueSize = isMobile ? 36.0 : 42.0;
-    final labelSize = isMobile ? 11.0 : 12.0;
+    final padding = isMobile ? 12.0 : 18.0;
+    final spacing = isMobile ? 8.0 : 14.0;
+    final valueSize = isMobile ? 26.0 : 42.0;
+    final labelSize = isMobile ? 10.0 : 12.0;
 
     return Container(
       width: width,
       padding: EdgeInsets.all(padding),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(isMobile ? 12 : 16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -78,6 +78,44 @@ class AdminService {
     }
   }
 
+Future<List<dynamic>> buscarPostsDenunciados() async {
+    try {
+      final token = await TokenStorage.instance.getAccessToken();
+
+      final response = await _dio.get(
+        '/usuarios/denuncias-posts',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      
+      return response.data; 
+    } catch (e) {
+      print('Erro ao buscar denúncias de posts: $e');
+      throw Exception('Não foi possível carregar as denúncias de posts.');
+    }
+  }
+
+Future<void> removerItemAdmin(int itemId) async {
+  try {
+    String? token = await TokenStorage.instance.getAccessToken(); 
+
+    await _dio.delete(
+      '/itens/admin/itens/$itemId',
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token', 
+        },
+      ),
+    );
+  } catch (e) {
+    print("Erro detalhado no AdminService: $e");
+    throw Exception('Erro ao remover o item via painel administrativo.');
+  }
+}
+
   Future<List<dynamic>> buscarDoacoesAtivas() async {
     try {
       final options = await _getAuthOptions(); 
