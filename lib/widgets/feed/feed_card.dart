@@ -3,12 +3,14 @@ import '../../models/feed_item.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../mapa/modal_mapa_local.dart';
+import '../../services/denuncia_service.dart'; 
 
 class FeedCard extends StatelessWidget {
   final FeedItem item;
   final VoidCallback onTap;
   final VoidCallback? onAcceptDirect;
   final VoidCallback? onOpenAgendamento;
+  final VoidCallback? onReport;
 
   const FeedCard({
     super.key,
@@ -16,6 +18,7 @@ class FeedCard extends StatelessWidget {
     required this.onTap,
     this.onAcceptDirect,
     this.onOpenAgendamento,
+    this.onReport,
   });
 
   @override
@@ -35,7 +38,12 @@ class FeedCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.max,
           children: [
-            _Imagem(fotoUrl: item.fotoUrl, status: item.status),
+            _Imagem(
+              fotoUrl: item.fotoUrl, 
+              status: item.status,
+              itemId: item.id,
+              onReport: onReport,
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -60,8 +68,137 @@ class FeedCard extends StatelessWidget {
 class _Imagem extends StatelessWidget {
   final String? fotoUrl;
   final String status;
+  final dynamic itemId;
+  final VoidCallback? onReport;
 
-  const _Imagem({required this.fotoUrl, required this.status});
+  const _Imagem({
+    required this.fotoUrl, 
+    required this.status, 
+    required this.itemId,
+    this.onReport,
+  });
+
+  void _mostrarModalDenunciaInterno(BuildContext context) {
+    String motivoSelecionado = 'Item inadequado ou ofensivo';
+    final TextEditingController descricaoController = TextEditingController();
+
+    final List<String> motivos = [
+      'Item inadequado ou ofensivo',
+      'Fraude, golpe ou anúncio falso',
+      'Item proibido por lei',
+      'Categoria errada ou spam',
+      'Outro motivo',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Row(
+                children: [
+                  Icon(Icons.report_problem, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Denunciar Post'),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Selecione o motivo principal:',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: motivoSelecionado,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      items: motivos.map((String motivo) {
+                        return DropdownMenuItem<String>(
+                          value: motivo,
+                          child: Text(motivo, style: const TextStyle(fontSize: 14)),
+                        );
+                      }).toList(),
+                      onChanged: (novoMotivo) {
+                        setDialogState(() {
+                          motivoSelecionado = novoMotivo!;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: descricaoController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Detalhes adicionais (opcional)',
+                        alignLabelWithHint: true,
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () async {
+                    final motivo = motivoSelecionado;
+                    final descricao = descricaoController.text;
+
+                    Navigator.pop(context);
+
+                    if (onReport != null) {
+                      onReport!();
+                    } else {
+                      try {
+                        await DenunciaService.instance.enviarDenuncia(
+                          itemId: itemId.toString(),
+                          motivo: motivo,
+                          descricao: descricao,
+                        );
+
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Denúncia registrada! O administrador irá analisar.'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erro ao enviar denúncia: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Enviar', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +226,22 @@ class _Imagem extends StatelessWidget {
                 )
               : null,
         ),
+        
+        Positioned(
+          top: 8,
+          right: 8,
+          child: CircleAvatar(
+            backgroundColor: Colors.black54,
+            radius: 18,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.report_outlined, size: 20, color: Colors.white),
+              tooltip: 'Denunciar esta publicação',
+              onPressed: () => _mostrarModalDenunciaInterno(context),
+            ),
+          ),
+        ),
+
         if (indisponivel)
           Positioned.fill(
             child: Container(

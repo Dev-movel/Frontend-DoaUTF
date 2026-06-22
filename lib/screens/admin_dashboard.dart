@@ -21,11 +21,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   // Futures que vão buscar os dados reais da API
   late Future<List<dynamic>> _usuariosFuture;
   late Future<List<dynamic>> _doacoesAtivasFuture;
+  // Future dedicado para buscar as denúncias de posts do backend
+  late Future<List<dynamic>> _postsDenunciadosFuture;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _validarAcessoAdmin();
     _carregarDados();
 
@@ -41,6 +43,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     setState(() {
       _usuariosFuture = AdminService.instance.buscarUsuarios();
       _doacoesAtivasFuture = AdminService.instance.buscarDoacoesAtivas();
+      _postsDenunciadosFuture = AdminService.instance.buscarPostsDenunciados();
     });
   }
 
@@ -118,7 +121,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [_buildListaUsuarios(), _buildListaDoacoes()],
+              children: [
+                _buildListaUsuarios(), 
+                _buildListaDoacoes(),
+                _buildListaPostsDenunciados(), 
+              ],
             ),
           ),
         ],
@@ -150,12 +157,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ListTile(
             leading: const Icon(Icons.dashboard, color: Color(0xFF2D7A1F)),
             title: const Text('Dashboard'),
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              Navigator.pop(context);
+              _tabController.animateTo(0); 
+            },
           ),
           ListTile(
-            leading: const Icon(Icons.report_problem),
+            leading: const Icon(Icons.report_problem, color: Colors.amber),
             title: const Text('Denúncias de Doações'),
-            onTap: () {},
+            onTap: () {
+              Navigator.pop(context); 
+              _tabController.animateTo(2); 
+            },
           ),
           ListTile(
             leading: const Icon(Icons.settings),
@@ -195,8 +208,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           if (snapshot.hasData) {
             final lista = snapshot.data!;
             totalUsuarios = lista.length.toString();
-            
-            // FILTRO EM TEMPO REAL: Conta quantos usuários possuem a flag bloqueado ativa
             int bloqueadosCount = lista.where((u) => u['bloqueado'] == true).length;
             totalBloqueados = bloqueadosCount.toString();
           }
@@ -212,7 +223,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 ),
               ),
               const SizedBox(width: 16),
-              // NOVO INDICADOR: Substituiu a contagem de doações concluídas mockadas
               Expanded(
                 child: _CardIndicador(
                   titulo: 'Usuários Bloqueados',
@@ -240,6 +250,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         tabs: const [
           Tab(icon: Icon(Icons.manage_accounts), text: 'Usuários'),
           Tab(icon: Icon(Icons.volunteer_activism), text: 'Doações Ativas'),
+          Tab(icon: Icon(Icons.report_gmailerrorred_rounded), text: 'Denúncias'),
         ],
       ),
     );
@@ -250,31 +261,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       future: _usuariosFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF2D7A1F)),
-          );
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF2D7A1F)));
         }
-
         if (snapshot.hasError) {
           return Center(
-            child: Text(
-              'Erro ao carregar usuários.\n${snapshot.error}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
+            child: Text('Erro ao carregar usuários.\n${snapshot.error}',
+                textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
           );
         }
-
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(
-            child: Text(
-              'Nenhum usuário cadastrado no sistema.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
+            child: Text('Nenhum usuário cadastrado no sistema.', style: TextStyle(fontSize: 16, color: Colors.grey)),
           );
         }
 
-        // BARRA DE PESQUISA: Filtra a lista localmente pelo que foi digitado
         final usuariosCadastrados = snapshot.data!.where((usuario) {
           final String nome = (usuario['nome'] ?? '').toString().toLowerCase();
           return nome.contains(_filtroNome);
@@ -282,7 +282,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
         return Column(
           children: [
-            // COMPONENTE NOVO: Barra de pesquisa com design limpo
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: TextField(
@@ -299,10 +298,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.grey.shade200),
@@ -314,16 +310,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 ),
               ),
             ),
-            
-            // Lista filtrada
             Expanded(
               child: usuariosCadastrados.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Nenhum usuário encontrado com esse nome.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
+                  ? const Center(child: Text('Nenhum usuário encontrado.', style: TextStyle(color: Colors.grey)))
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       itemCount: usuariosCadastrados.length,
@@ -331,19 +320,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         final usuario = usuariosCadastrados[index];
                         final String nome = usuario['nome'] ?? 'Sem nome';
                         final String email = usuario['email'] ?? 'Sem e-mail';
-
                         final int rawId = usuario['id'] ?? 0;
-                        final String idUsuario = rawId.toString();
-
                         final bool isBloqueado = usuario['bloqueado'] == true;
                         final bool isDenunciado = usuario['denunciado'] == true;
 
                         return Card(
                           elevation: 2,
                           margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           child: ListTile(
                             leading: CircleAvatar(
                               backgroundColor: isBloqueado 
@@ -353,32 +337,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                 isBloqueado 
                                     ? Icons.lock 
                                     : (isDenunciado ? Icons.warning_amber_rounded : Icons.person),
-                                color: isBloqueado 
-                                    ? Colors.red 
-                                    : (isDenunciado ? Colors.amber[800] : Colors.blue),
+                                color: isBloqueado ? Colors.red : (isDenunciado ? Colors.amber[800] : Colors.blue),
                               ),
                             ),
                             title: Row(
                               children: [
                                 Expanded(
-                                  child: Text(
-                                    nome,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  child: Text(nome, style: const TextStyle(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
                                 ),
                                 if (isDenunciado) ...[
                                   const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber[800],
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Text(
-                                      'DENUNCIADO',
-                                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                    ),
+                                    decoration: BoxDecoration(color: Colors.amber[800], borderRadius: BorderRadius.circular(6)),
+                                    child: const Text('DENUNCIADO', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                                   ),
                                 ],
                               ],
@@ -387,57 +359,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  'ID: $idUsuario',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey,
-                                  ),
-                                ),
+                                Text('ID: $rawId', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
                                 const SizedBox(width: 4),
-                                
                                 if (isDenunciado)
                                   IconButton(
                                     icon: const Icon(Icons.gpp_good, color: Colors.green),
-                                    tooltip: 'Ignorar / Cancelar Denúncia',
+                                    tooltip: 'Ignorar Denúncia',
                                     onPressed: () async {
                                       try {
-                                        await AdminService.instance.atualizarUsuario(
-                                          id: rawId,
-                                          denunciado: false,
-                                        );
+                                        await AdminService.instance.atualizarUsuario(id: rawId, denunciado: false);
                                         _carregarDados();
-
                                         if (!context.mounted) return;
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Denúncia cancelada com sucesso!'),
-                                            backgroundColor: Colors.green,
-                                          ),
+                                          const SnackBar(content: Text('Denúncia cancelada!'), backgroundColor: Colors.green),
                                         );
                                       } catch (e) {
                                         if (!context.mounted) return;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
-                                        );
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red));
                                       }
                                     },
                                   ),
-
                                 IconButton(
-                                  icon: Icon(
-                                    isBloqueado ? Icons.lock_open : Icons.block,
-                                    color: isBloqueado ? Colors.green : Colors.red,
-                                  ),
+                                  icon: Icon(isBloqueado ? Icons.lock_open : Icons.block, color: isBloqueado ? Colors.green : Colors.red),
                                   tooltip: isBloqueado ? 'Desbloquear' : 'Bloquear',
                                   onPressed: () async {
                                     try {
-                                      await AdminService.instance.atualizarUsuario(
-                                        id: rawId,
-                                        bloqueado: !isBloqueado,
-                                      );
+                                      await AdminService.instance.atualizarUsuario(id: rawId, bloqueado: !isBloqueado);
                                       _carregarDados();
-
                                       if (!context.mounted) return;
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
@@ -447,9 +395,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                       );
                                     } catch (e) {
                                       if (!context.mounted) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
-                                      );
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red));
                                     }
                                   },
                                 )
@@ -466,32 +412,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     );
   }
 
-    Widget _buildListaDoacoes() {
+  Widget _buildListaDoacoes() {
     return FutureBuilder<List<dynamic>>(
       future: _doacoesAtivasFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xFF2D7A1F)),
-          );
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF2D7A1F)));
         }
-
         if (snapshot.hasError) {
           return Center(
-            child: Text(
-              'Erro ao carregar doações.\n${snapshot.error}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
-            ),
+            child: Text('Erro ao carregar doações.\n${snapshot.error}',
+                textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
           );
         }
-
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(
-            child: Text(
-              'Nenhuma doação ativa cadastrada.',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-            ),
+            child: Text('Nenhuma doação ativa cadastrada.', style: TextStyle(fontSize: 16, color: Colors.grey)),
           );
         }
 
@@ -502,7 +438,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           itemCount: listaDoacoes.length,
           itemBuilder: (context, index) {
             final doacao = listaDoacoes[index];
-            
             final String tituloItem = doacao["titulo"] ?? 'Item sem título';
             final String nomeDoador = doacao["nome_doador"] ?? (doacao["pessoa"]?["nome"] ?? 'Anônimo');
             final String dataPostagem = doacao["data_criacao"] ?? (doacao["created_at"] ?? 'Sem data');
@@ -510,28 +445,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             return Card(
               elevation: 2,
               margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.inventory_2_rounded,
-                    color: Colors.orange,
-                  ),
+                  decoration: BoxDecoration(color: Colors.orange[50], borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.inventory_2_rounded, color: Colors.orange),
                 ),
-                title: Text(
-                  tituloItem,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  'Doador: $nomeDoador\nPostado em: $dataPostagem',
-                ),
+                title: Text(tituloItem, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('Doador: $nomeDoador\nPostado em: $dataPostagem'),
                 isThreeLine: true,
                 trailing: IconButton(
                   icon: const Icon(Icons.remove_red_eye, color: Colors.grey),
@@ -544,6 +466,144 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         );
       },
     );
+  }
+
+  Widget _buildListaPostsDenunciados() {
+    return FutureBuilder<List<dynamic>>(
+      future: _postsDenunciadosFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF2D7A1F)));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Erro ao carregar denúncias.\n${snapshot.error}',
+                textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
+          );
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(
+            child: Text('Nenhum post denunciado no momento.', style: TextStyle(fontSize: 16, color: Colors.grey)),
+          );
+        }
+
+        final listaDenuncias = snapshot.data!;
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: listaDenuncias.length,
+          itemBuilder: (context, index) {
+            final denuncia = listaDenuncias[index];
+            final String tituloPost = denuncia['item_titulo'] ?? 'Post sem título';
+            final String motivo = denuncia['motivo'] ?? 'Não especificado';
+            final String descricao = denuncia['descricao'] ?? '';
+            final String doador = denuncia['nome_doador'] ?? 'Desconhecido';
+
+            return Card(
+              elevation: 2,
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ExpansionTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFFFEBEE),
+                  child: Icon(Icons.report_gmailerrorred_rounded, color: Colors.red),
+                ),
+                title: Text(tituloPost, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text('Motivo: $motivo\nPublicado por: $doador'),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (descricao.isNotEmpty) ...[
+                          const Text('Comentários extras do denunciante:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
+                          const SizedBox(height: 4),
+                          Text(descricao, style: const TextStyle(color: Colors.black87)),
+                          const SizedBox(height: 16),
+                        ],
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton.icon(
+                              icon: const Icon(Icons.check, color: Colors.green),
+                              label: const Text('Manter Post', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                              onPressed: () async {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Denúncia arquivada. O post continua ativo.')),
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.delete_forever, color: Colors.white),
+                              label: const Text('Remover Conteúdo'),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                              onPressed: () async {
+                                // 1. Confirmação com o usuário através do diálogo
+                                bool confirmar = await _mostrarDialogoConfirmacao(context);
+                                if (!confirmar) return;
+
+                                try {
+                                  // 2. Chamar o serviço usando o Singleton do AdminService
+                                  await AdminService.instance.removerItemAdmin(denuncia['item_id']);
+
+                                  if (!context.mounted) return;
+                                  
+                                  // 3. Feedback de sucesso
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Item removido com sucesso!')),
+                                  );
+
+                                  // 4. Recarrega as listas da API resetando o estado visual
+                                  _carregarDados();
+
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(e.toString())),
+                                  );
+                                }
+                              },
+                            )
+                          ],
+                        )
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Método do Diálogo de Confirmação integrado perfeitamente dentro da classe do estado
+  Future<bool> _mostrarDialogoConfirmacao(BuildContext context) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Confirmar Exclusão'),
+            content: const Text(
+              'Tem certeza que deseja remover permanentemente este item do sistema? '
+              'Esta ação removerá o post e suas respectivas denúncias.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Excluir'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }
 
@@ -578,20 +638,12 @@ class _CardIndicador extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             valor,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
           ),
           const SizedBox(height: 4),
           Text(
             titulo,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
           ),
         ],
       ),
