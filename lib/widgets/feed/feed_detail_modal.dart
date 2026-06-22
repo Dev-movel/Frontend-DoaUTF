@@ -135,7 +135,7 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _HeaderImagem(fotoUrl: item.fotoUrl),
+            _HeaderImagem(fotos: item.fotos),
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
@@ -146,6 +146,16 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
                     const SizedBox(height: 12),
                     Text(item.titulo, style: AppTextStyles.cardTitle),
                     const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.person_outline, size: 16, color: AppColors.outline),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Doado por ${item.doadorNome}',
+                          style: AppTextStyles.body.copyWith(color: AppColors.outline),
+                        ),
+                      ],
+                    ),
                     _BotaoLocalizacao(localizacao: item.localizacao),
                     const Divider(height: 32, color: AppColors.outlineVariant),
                     Text('Descrição', style: AppTextStyles.sectionTitle),
@@ -216,27 +226,44 @@ class _FeedDetailDialogState extends State<_FeedDetailDialog> {
   }
 }
 
-class _HeaderImagem extends StatelessWidget {
-  final String? fotoUrl;
-  const _HeaderImagem({required this.fotoUrl});
+class _HeaderImagem extends StatefulWidget {
+  final List<String> fotos;
+  const _HeaderImagem({required this.fotos});
+
+  @override
+  State<_HeaderImagem> createState() => _HeaderImagemState();
+}
+
+class _HeaderImagemState extends State<_HeaderImagem> {
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
+    final bool temFotos = widget.fotos.isNotEmpty;
+
     return Stack(
       children: [
         Container(
           height: 260,
           width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.containerHigh,
-            image: fotoUrl != null
-                ? DecorationImage(image: NetworkImage(fotoUrl!), fit: BoxFit.cover)
-                : null,
-          ),
-          child: fotoUrl == null
+          color: AppColors.containerHigh,
+          child: !temFotos
               ? const Icon(Icons.image_not_supported_outlined, size: 52, color: AppColors.outline)
-              : null,
+              : PageView.builder(
+                  itemCount: widget.fotos.length,
+                  onPageChanged: (index) => setState(() => _currentIndex = index),
+                  itemBuilder: (context, index) {
+                    return Image.network(
+                      widget.fotos[index],
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Center(
+                        child: Icon(Icons.broken_image, size: 52, color: AppColors.outline),
+                      ),
+                    );
+                  },
+                ),
         ),
+        
         Positioned(
           top: 12,
           right: 12,
@@ -248,6 +275,33 @@ class _HeaderImagem extends StatelessWidget {
             ),
           ),
         ),
+
+        if (widget.fotos.length > 1)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                widget.fotos.length,
+                (index) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _currentIndex == index
+                        ? AppColors.primary
+                        : Colors.white.withOpacity(0.5),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 2)
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -288,8 +288,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   crossAxisCount: colunas,
                   mainAxisSpacing: _espacamento,
                   crossAxisSpacing: _espacamento,
-                  // ajusta altura para imagens maiores e garante proporção visual
-                  mainAxisExtent: 380,
+                  mainAxisExtent: 410,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (_, index) {
