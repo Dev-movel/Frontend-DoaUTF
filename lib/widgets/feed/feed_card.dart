@@ -3,21 +3,17 @@ import '../../models/feed_item.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../mapa/modal_mapa_local.dart';
-import '../../services/denuncia_service.dart'; 
+import '../../services/denuncia_service.dart';
 
 class FeedCard extends StatelessWidget {
   final FeedItem item;
   final VoidCallback onTap;
-  final VoidCallback? onAcceptDirect;
-  final VoidCallback? onOpenAgendamento;
   final VoidCallback? onReport;
 
   const FeedCard({
     super.key,
     required this.item,
     required this.onTap,
-    this.onAcceptDirect,
-    this.onOpenAgendamento,
     this.onReport,
   });
 
@@ -39,7 +35,7 @@ class FeedCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.max,
           children: [
             _Imagem(
-              fotoUrl: item.fotoUrl, 
+              fotoUrl: item.fotoUrl,
               status: item.status,
               itemId: item.id,
               onReport: onReport,
@@ -52,8 +48,22 @@ class FeedCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.max,
                   children: [
                     _CategoriaChip(categoria: item.categoria),
-                    const SizedBox(height: 8),
-                    _TituloELocalizacao(item: item),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.titulo,
+                      style: AppTextStyles.featureTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.descricao ?? '',
+                      style: AppTextStyles.body,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 12),
+                    _DoadorRow(item: item),
                   ],
                 ),
               ),
@@ -65,6 +75,8 @@ class FeedCard extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _Imagem extends StatelessWidget {
   final String? fotoUrl;
   final String status;
@@ -72,11 +84,33 @@ class _Imagem extends StatelessWidget {
   final VoidCallback? onReport;
 
   const _Imagem({
-    required this.fotoUrl, 
-    required this.status, 
+    required this.fotoUrl,
+    required this.status,
     required this.itemId,
     this.onReport,
   });
+
+  String get _label {
+    switch (status.toLowerCase()) {
+      case 'reservado':
+        return 'Reservado';
+      case 'doado':
+        return 'Doado';
+      default:
+        return 'Disponível';
+    }
+  }
+
+  Color get _badgeColor {
+    switch (status.toLowerCase()) {
+      case 'reservado':
+        return Colors.orange;
+      case 'doado':
+        return Colors.grey;
+      default:
+        return AppColors.primary;
+    }
+  }
 
   void _mostrarModalDenunciaInterno(BuildContext context) {
     String motivoSelecionado = 'Item inadequado ou ofensivo';
@@ -202,31 +236,34 @@ class _Imagem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool indisponivel = status.toLowerCase() != 'disponivel';
-
     return Stack(
       children: [
-        Container(
-          height: 260,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.containerHigh,
-            image: fotoUrl != null
-                ? DecorationImage(
-                    image: NetworkImage(fotoUrl!),
-                    fit: BoxFit.cover,
-                  )
-                : null,
-          ),
-          child: fotoUrl == null
-              ? const Icon(
-                  Icons.image_not_supported_outlined,
-                  size: 60,
-                  color: AppColors.outline,
+        AspectRatio(
+          aspectRatio: 1.0,
+          child: fotoUrl != null
+              ? Image.network(
+                  fotoUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => _Placeholder(),
                 )
-              : null,
+              : _Placeholder(),
         ),
-        
+        Positioned(
+          top: 8,
+          left: 8,
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _badgeColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _label,
+              style: AppTextStyles.badge.copyWith(color: Colors.white),
+            ),
+          ),
+        ),
         Positioned(
           top: 8,
           right: 8,
@@ -241,33 +278,27 @@ class _Imagem extends StatelessWidget {
             ),
           ),
         ),
-
-        if (indisponivel)
-          Positioned.fill(
-            child: Container(
-              color: Colors.black.withOpacity(0.6),
-              alignment: Alignment.center,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  status.toUpperCase(),
-                  style: AppTextStyles.subtitle.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ),
-          ),
       ],
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Placeholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.containerHigh,
+      child: const Center(
+        child:
+            Icon(Icons.image_outlined, color: AppColors.outline, size: 32),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _CategoriaChip extends StatelessWidget {
   final String categoria;
@@ -276,107 +307,96 @@ class _CategoriaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: AppColors.primaryContainer.withOpacity(0.08),
+        border: Border.all(color: AppColors.primary),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: AppColors.primaryContainer.withOpacity(0.15),
-          width: 1,
-        ),
       ),
       child: Text(
-        categoria,
-        style: AppTextStyles.subtitle.copyWith(
-          color: AppColors.primaryContainer,
-          fontWeight: FontWeight.w600,
-        ),
+        categoria.toUpperCase(),
+        style: AppTextStyles.label.copyWith(color: AppColors.primary),
       ),
     );
   }
 }
 
-class _TituloELocalizacao extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DoadorRow extends StatelessWidget {
   final FeedItem item;
-  const _TituloELocalizacao({required this.item});
+  const _DoadorRow({required this.item});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
+    final inicial = item.doadorNome.isNotEmpty
+        ? item.doadorNome[0].toUpperCase()
+        : '?';
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 14,
+          backgroundColor: AppColors.primary,
+          child: Text(
+            inicial,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                item.titulo,
-                style: AppTextStyles.cardTitle,
-                maxLines: 2,
+                item.doadorNome,
+                style: AppTextStyles.input,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              // ── Localização (botão) + tempo ──────────────────────
               Row(
                 children: [
-                  const Icon(Icons.person_outline, size: 13, color: AppColors.outline),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      'Doado por ${item.doadorNome}',
-                      style: AppTextStyles.subtitle.copyWith(color: AppColors.outline),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  // Botão de localização — abre o modal do mapa
+                  GestureDetector(
+                    onTap: () => ModalMapaLocal.mostrar(
+                      context,
+                      localizacao: item.localizacao,
                     ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 12,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          item.localizacao,
+                          style: AppTextStyles.subtitle.copyWith(
+                            color: AppColors.primary,
+                            decoration: TextDecoration.underline,
+                            decorationColor: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Separador e tempo
+                  Text(
+                    ' • ${item.tempoAtras}',
+                    style: AppTextStyles.subtitle,
                   ),
                 ],
               ),
             ],
           ),
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () => ModalMapaLocal.mostrar(
-                  context,
-                  localizacao: item.localizacao,
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 13,
-                      color: AppColors.primaryContainer,
-                    ),
-                    SizedBox(width: 2),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => ModalMapaLocal.mostrar(
-                    context,
-                    localizacao: item.localizacao,
-                  ),
-                  child: Text(
-                    item.localizacao,
-                    style: AppTextStyles.subtitle.copyWith(
-                      color: AppColors.primaryContainer,
-                      decoration: TextDecoration.underline,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-              Text(
-                ' • ${item.tempoAtras}',
-                style: AppTextStyles.subtitle,
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
