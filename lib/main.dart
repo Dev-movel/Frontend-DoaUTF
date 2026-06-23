@@ -17,6 +17,7 @@ import 'screens/admin_dashboard.dart';
 import 'screens/tela_mapa.dart';
 import 'screens/notificacoes_screen.dart';
 import 'screens/chat_screen.dart';
+import 'screens/conversas_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -62,6 +63,7 @@ class MyApp extends StatelessWidget {
         '/admin-dashboard': (_) => const AdminDashboardScreen(),
         '/feed': (_) => const FeedScreen(),
         '/mapa': (_) => TelaDoMapa(),
+        '/conversas': (_) => const ConversasScreen(),
         '/notificacoes': (_) => const NotificacoesScreen(),
       },
 
@@ -115,6 +117,7 @@ class MyApp extends StatelessWidget {
               meuId: args['meuId'] as int,
               nomeOutroUsuario: args['nomeOutroUsuario'] as String,
               tituloItem: args['tituloItem'] as String,
+              modoLeitura: args['modoLeitura'] as bool? ?? false,
             ),
           );
         }

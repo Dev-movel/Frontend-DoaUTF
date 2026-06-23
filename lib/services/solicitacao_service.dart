@@ -1,13 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../auth/services/token_storage.dart';
+import '../config/app_config.dart';
 
 class SolicitacaoException implements Exception {
   final String message;
   const SolicitacaoException(this.message);
-
-  @override
-  String toString() => message;
 }
 
 class SolicitacaoService {
@@ -15,7 +13,7 @@ class SolicitacaoService {
   static final SolicitacaoService instance = SolicitacaoService._();
 
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://localhost:3000',
+    baseUrl: AppConfig.apiBaseUrl,
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 30),
   ));
@@ -71,7 +69,6 @@ class SolicitacaoService {
     } on DioException catch (e) {
       debugPrint('❌ [DELETE /solicitacoes/$solicitacaoId] ${e.response?.statusCode} – ${e.response?.data}');
       throw SolicitacaoException(switch (e.response?.statusCode) {
-        400 => 'Esta solicitação não está mais pendente.',
         403 => 'Sem permissão para cancelar esta solicitação.',
         404 => 'Solicitação não encontrada.',
         _   => 'Erro ao cancelar solicitação. Tente novamente.',
@@ -79,7 +76,7 @@ class SolicitacaoService {
     }
   }
 
-Future<List<dynamic>> buscarSolicitacoesDoItem(int itemId) async {
+  Future<List<dynamic>> buscarSolicitacoesDoItem(int itemId) async {
     try {
       final token = await TokenStorage.instance.getAccessToken();
       final response = await _dio.get(
@@ -96,19 +93,18 @@ Future<List<dynamic>> buscarSolicitacoesDoItem(int itemId) async {
   Future<void> aceitarSolicitacao(int solicitacaoId) async {
     try {
       final token = await TokenStorage.instance.getAccessToken();
-      
+
       await _dio.patch(
         '/solicitacoes/$solicitacaoId/aceitar',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
     } on DioException catch (e) {
       debugPrint('❌ [PATCH /solicitacoes/$solicitacaoId/aceitar] ${e.response?.statusCode} – ${e.response?.data}');
-      
+
       throw SolicitacaoException(switch (e.response?.statusCode) {
         401 => 'Sessão expirada. Faça login novamente.',
         403 => 'Você não tem permissão para aceitar esta solicitação.',
         404 => 'Solicitação não encontrada.',
-        422 => 'Este item não está mais disponível para doação.',
         _   => 'Erro ao aceitar solicitação. Tente novamente.',
       });
     }

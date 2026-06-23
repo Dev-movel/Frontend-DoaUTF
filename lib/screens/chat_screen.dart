@@ -11,6 +11,7 @@ class ChatScreen extends StatefulWidget {
   final int meuId;
   final String nomeOutroUsuario;
   final String tituloItem;
+  final bool modoLeitura;
 
   const ChatScreen({
     super.key,
@@ -18,6 +19,7 @@ class ChatScreen extends StatefulWidget {
     required this.meuId,
     required this.nomeOutroUsuario,
     required this.tituloItem,
+    this.modoLeitura = false,
   });
 
   @override
@@ -39,7 +41,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    NotificationService.instance.marcarComoLido(widget.solicitacaoId);
+    NotificationService.instance.abrirChat(widget.solicitacaoId);
     _inicializar();
   }
 
@@ -47,7 +49,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _appEmFoco = state == AppLifecycleState.resumed;
     if (_appEmFoco) {
-      NotificationService.instance.marcarComoLido(widget.solicitacaoId);
+      NotificationService.instance.abrirChat(widget.solicitacaoId);
     }
   }
 
@@ -60,6 +62,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _carregando = false;
     });
     _rolarParaBaixo();
+
+    // Modo leitura: não conecta WebSocket
+    if (widget.modoLeitura) return;
 
     final channel = await ChatService.instance.conectar(widget.solicitacaoId);
     if (!mounted) return;
@@ -79,14 +84,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         });
         _rolarParaBaixo();
 
-        if (msg.remetenteId != widget.meuId && !_appEmFoco) {
-          NotificationService.instance.adicionarMensagem(
-            solicitacaoId: widget.solicitacaoId,
-            meuId: widget.meuId,
-            nomeOutroUsuario: widget.nomeOutroUsuario,
-            tituloItem: widget.tituloItem,
-            mensagem: msg.conteudo,
-          );
+        // Se a mensagem é do outro usuário e o chat está visível, marca como lida
+        if (msg.remetenteId != widget.meuId && _appEmFoco) {
+          NotificationService.instance.abrirChat(widget.solicitacaoId);
         }
       },
       onDone: () {
@@ -143,6 +143,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    NotificationService.instance.fecharChat(widget.solicitacaoId);
     _sub?.cancel();
     ChatService.instance.fechar();
     _scrollController.dispose();
@@ -157,7 +158,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       appBar: _buildAppBar(),
       body: Column(
         children: [
-          if (!_carregando && !_conectado)
+          if (widget.modoLeitura) _BannerEncerrado(),
+          if (!widget.modoLeitura && !_carregando && !_conectado)
             _BannerDesconectado(
               onReconectar: () async {
                 final ch =
@@ -167,7 +169,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               },
             ),
           Expanded(child: _buildLista()),
-          _InputBar(controller: _inputController, onEnviar: _enviar),
+          if (!widget.modoLeitura)
+            _InputBar(controller: _inputController, onEnviar: _enviar),
         ],
       ),
     );
@@ -255,6 +258,33 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ],
         );
       },
+    );
+  }
+}
+
+// ── Banner de conversa encerrada ──────────────────────────────────────────
+
+class _BannerEncerrado extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.outline.withOpacity(0.08),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.lock_outline, size: 14, color: AppColors.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(
+            'Esta conversa foi encerrada.',
+            style: AppTextStyles.label.copyWith(
+              color: AppColors.onSurfaceVariant,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

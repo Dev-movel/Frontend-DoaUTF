@@ -1,13 +1,219 @@
 import 'package:flutter/material.dart';
 import '../models/usuario.dart';
 import '../services/usuario_service.dart';
-import '../services/notificacao_service.dart';
+import '../services/notification_service.dart';
 import '../auth/services/token_storage.dart';
 import '../auth/services/auth_service.dart';
 import '../theme/app_colors.dart';
-import '../screens/notificacoes_screen.dart';
+import '../theme/app_text_styles.dart';
 
 enum _MenuOpcao { perfil, sair }
+
+// ── Sino com badge de notificações ─────────────────────────────────────────
+
+class _SinoBadge extends StatelessWidget {
+  final BuildContext context;
+  const _SinoBadge({required this.context});
+
+  void _abrirNotificacoes(BuildContext ctx) {
+    NotificationService.instance.buscarLista();
+    showModalBottomSheet(
+      context: ctx,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _PainelNotificacoes(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext ctx) {
+    return ListenableBuilder(
+      listenable: NotificationService.instance,
+      builder: (_, __) {
+        final total = NotificationService.instance.totalNaoLidas;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              onPressed: () => _abrirNotificacoes(ctx),
+              icon: const Icon(Icons.notifications_none,
+                  color: AppColors.onSurface),
+              tooltip: 'Notificações',
+            ),
+            if (total > 0)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints:
+                        const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Text(
+                      total > 99 ? '99+' : '$total',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Painel de notificações (bottom sheet) ──────────────────────────────────
+
+class _PainelNotificacoes extends StatelessWidget {
+  const _PainelNotificacoes();
+
+  String _tempoAtras(DateTime dt) {
+    final diff = DateTime.now().difference(dt.toLocal());
+    if (diff.inMinutes < 1) return 'agora';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}min';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: NotificationService.instance,
+      builder: (ctx, __) {
+        final lista = NotificationService.instance.lista;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  children: [
+                    Text('Notificações',
+                        style: AppTextStyles.headline.copyWith(fontSize: 18)),
+                    const Spacer(),
+                    if (lista.any((n) => !n.lida))
+                      TextButton(
+                        onPressed: () {
+                          NotificationService.instance.marcarTodasComoLidas();
+                        },
+                        child: Text(
+                          'Marcar todas como lidas',
+                          style: AppTextStyles.body.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              if (lista.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Column(
+                    children: [
+                      Icon(Icons.notifications_none,
+                          size: 48,
+                          color: AppColors.outline.withOpacity(0.4)),
+                      const SizedBox(height: 12),
+                      Text('Nenhuma notificação',
+                          style: AppTextStyles.body
+                              .copyWith(color: AppColors.onSurfaceVariant)),
+                    ],
+                  ),
+                )
+              else
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.5,
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: lista.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 72),
+                    itemBuilder: (_, i) {
+                      final n = lista[i];
+                      final nome = n.usuarioNome;
+                      final titulo = n.itemTitulo;
+
+                      return ListTile(
+                        tileColor: n.lida
+                            ? null
+                            : AppColors.primaryContainer.withOpacity(0.06),
+                        leading: CircleAvatar(
+                          radius: 22,
+                          backgroundColor: AppColors.primary,
+                          child: Text(
+                            nome.isNotEmpty ? nome[0].toUpperCase() : '?',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        title: Text(nome,
+                            style: AppTextStyles.input
+                                .copyWith(fontWeight: FontWeight.w700)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (titulo.isNotEmpty)
+                              Text(titulo,
+                                  style: AppTextStyles.label.copyWith(
+                                      color: AppColors.primary, fontSize: 10)),
+                            Text(
+                              n.mensagem,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.body.copyWith(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        trailing: Text(
+                          _tempoAtras(n.criadoEm),
+                          style: AppTextStyles.label
+                              .copyWith(color: AppColors.outline, fontSize: 10),
+                        ),
+                        onTap: () async {
+                          final nav = Navigator.of(ctx, rootNavigator: true);
+                          Navigator.of(ctx).pop();
+                          await NotificationService.instance.marcarComoLida(n.id);
+                          nav.pushNamed(
+                            '/chat',
+                            arguments: {
+                              'solicitacaoId': n.solicitacaoId,
+                              'meuId': n.meuId,
+                              'nomeOutroUsuario': nome,
+                              'tituloItem': titulo,
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
 
 class MainAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String activeRoute;
@@ -29,7 +235,6 @@ class MainAppBar extends StatefulWidget implements PreferredSizeWidget {
 class _MainAppBarState extends State<MainAppBar> {
   Usuario? _usuario;
   bool _autenticado = false;
-  int _qtdNaoLidas = 0;
 
   @override
   void initState() {
@@ -44,44 +249,18 @@ class _MainAppBarState extends State<MainAppBar> {
       return;
     }
     try {
-      final results = await Future.wait([
-        UsuarioService.instance.getMe(),
-        NotificacaoService.instance.contarNaoLidas(),
-      ]);
+      final user = await UsuarioService.instance.getMe();
       if (mounted) {
         setState(() {
-          _usuario = results[0] as Usuario;
-          _qtdNaoLidas = results[1] as int;
+          _usuario = user;
           _autenticado = true;
         });
       }
+      // Começa a checar notificações periodicamente.
+      NotificationService.instance.iniciarPolling();
     } catch (_) {
       if (mounted) setState(() => _autenticado = false);
     }
-  }
-
-  Future<void> _abrirNotificacoes() async {
-    final isMobile = MediaQuery.of(context).size.width < 700;
-
-    if (isMobile) {
-      await Navigator.pushNamed(context, '/notificacoes');
-    } else {
-      await showDialog<void>(
-        context: context,
-        builder: (_) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: SizedBox(
-            width: 480,
-            height: MediaQuery.of(context).size.height * 0.75,
-            child: const NotificacoesScreen(isDialog: true),
-          ),
-        ),
-      );
-    }
-
-    if (!mounted) return;
-    final count = await NotificacaoService.instance.contarNaoLidas();
-    if (mounted) setState(() => _qtdNaoLidas = count);
   }
 
   TextStyle _navStyle(String route) {
@@ -93,6 +272,7 @@ class _MainAppBarState extends State<MainAppBar> {
   }
 
   Future<void> _sair() async {
+    NotificationService.instance.pararPolling();
     await AuthService.instance.logout();
     if (mounted) {
       Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
@@ -115,20 +295,18 @@ class _MainAppBarState extends State<MainAppBar> {
             PopupMenuButton<String>(
               icon: const Icon(Icons.menu, color: AppColors.onSurface),
               onSelected: (route) {
-                if (route == '/mapa') {
-                  Navigator.pushNamed(context, route);
-                } else if (route == '/doar') {
+                if (route == '/doar' || route == '/conversas') {
                   Navigator.pushNamed(context, route);
                 } else {
                   Navigator.pushReplacementNamed(context, route);
                 }
               },
               itemBuilder: (_) => [
-                PopupMenuItem(value: '/feed',      child: Text('Feed',      style: _navStyle('/feed'))),
-                PopupMenuItem(value: '/doar',      child: Text('Doar',      style: _navStyle('/doar'))),
-                PopupMenuItem(value: '/mapa',      child: Text('Mapa',      style: _navStyle('/mapa'))),
-                PopupMenuItem(value: '/dashboard', child: Text('Dashboard', style: _navStyle('/dashboard'))),
-                PopupMenuItem(value: '/profile',   child: Text('Perfil',    style: _navStyle('/profile'))),
+                PopupMenuItem(value: '/feed',       child: Text('Feed',       style: _navStyle('/feed'))),
+                PopupMenuItem(value: '/doar',       child: Text('Doar',       style: _navStyle('/doar'))),
+                PopupMenuItem(value: '/conversas',  child: Text('Chat',       style: _navStyle('/conversas'))),
+                PopupMenuItem(value: '/dashboard',  child: Text('Dashboard',  style: _navStyle('/dashboard'))),
+                PopupMenuItem(value: '/profile',    child: Text('Perfil',     style: _navStyle('/profile'))),
               ],
             )
           else
@@ -156,8 +334,8 @@ class _MainAppBarState extends State<MainAppBar> {
                     child: Text('Doar', style: _navStyle('/doar')),
                   ),
                   TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/mapa'),
-                    child: Text('Mapa', style: _navStyle('/mapa')),
+                    onPressed: () => Navigator.pushNamed(context, '/conversas'),
+                    child: Text('Chat', style: _navStyle('/conversas')),
                   ),
                   TextButton(
                     onPressed: () => Navigator.pushReplacementNamed(context, '/dashboard'),
@@ -175,41 +353,8 @@ class _MainAppBarState extends State<MainAppBar> {
 
           // ── Notificação + avatar com dropdown: só quando autenticado ─────
           if (_autenticado) ...[
-            GestureDetector(
-              onTap: _abrirNotificacoes,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    _qtdNaoLidas > 0
-                        ? Icons.notifications
-                        : Icons.notifications_none,
-                    color: AppColors.onSurface,
-                  ),
-                  if (_qtdNaoLidas > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          _qtdNaoLidas > 99 ? '99+' : '$_qtdNaoLidas',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
+            _SinoBadge(context: context),
+            const SizedBox(width: 4),
             PopupMenuButton<_MenuOpcao>(
               offset: const Offset(0, 44),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -5,6 +5,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../auth/services/token_storage.dart';
 import '../config/app_config.dart';
 import '../models/chat_message.dart';
+import '../models/conversa_item.dart';
 
 class ChatService {
   ChatService._();
@@ -62,5 +63,36 @@ class ChatService {
   void fechar() {
     _channel?.sink.close();
     _channel = null;
+  }
+
+  /// Busca todas as conversas do usuário logado.
+  Future<List<ConversaItem>> buscarConversas() async {
+    try {
+      final token = await TokenStorage.instance.getAccessToken();
+      final response = await _dio.get(
+        '/chat/conversas',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      final list = response.data as List<dynamic>;
+      return list
+          .map((e) => ConversaItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } on DioException catch (e) {
+      debugPrint('❌ [GET /chat/conversas] ${e.response?.statusCode}');
+      return [];
+    }
+  }
+
+  /// Marca todas as mensagens de uma conversa como lidas.
+  Future<void> marcarComoLido(int solicitacaoId) async {
+    try {
+      final token = await TokenStorage.instance.getAccessToken();
+      await _dio.patch(
+        '/chat/$solicitacaoId/lido',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } on DioException catch (e) {
+      debugPrint('❌ [PATCH /chat/$solicitacaoId/lido] ${e.response?.statusCode}');
+    }
   }
 }

@@ -4,11 +4,15 @@ import '../../theme/app_colors.dart';
 
 class ModalInteressadosBottomSheet extends StatefulWidget {
   final int itemId;
+  final int meuId;
+  final String tituloItem;
   final VoidCallback onSolicitacaoAceita;
 
   const ModalInteressadosBottomSheet({
     super.key,
     required this.itemId,
+    required this.meuId,
+    required this.tituloItem,
     required this.onSolicitacaoAceita,
   });
 
@@ -80,6 +84,17 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
       }
       _carregarInteressados();
     }
+  }
+
+  void _abrirChat(int solicitacaoId, String nomeSolicitante) {
+    final nav = Navigator.of(context, rootNavigator: true);
+    nav.pop(); // fecha o bottom sheet
+    nav.pushNamed('/chat', arguments: {
+      'solicitacaoId': solicitacaoId,
+      'meuId': widget.meuId,
+      'nomeOutroUsuario': nomeSolicitante,
+      'tituloItem': widget.tituloItem,
+    });
   }
 
   String _formatarData(String? dataIso) {
@@ -173,6 +188,7 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
         
         final nome = solicitante['nome'] ?? solicitacao['solicitante_nome'] ?? 'Usuário Interessado';
         final dataCriacao = _formatarData(solicitacao['criado_em'] ?? solicitacao['data_solicitacao']);
+        final solicitacaoId = solicitacao['id'] as int;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -182,58 +198,77 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.outlineVariant.withOpacity(0.5)),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: AppColors.primaryContainer.withOpacity(0.12),
-                      child: Text(
-                        nome.isNotEmpty ? nome[0].toUpperCase() : 'U',
-                        style: const TextStyle(
-                          color: AppColors.primaryContainer, 
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            nome,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: AppColors.primaryContainer.withOpacity(0.12),
+                          child: Text(
+                            nome.isNotEmpty ? nome[0].toUpperCase() : 'U',
                             style: const TextStyle(
-                              fontWeight: FontWeight.bold, 
-                              color: AppColors.onSurface,
+                              color: AppColors.primaryContainer, 
+                              fontWeight: FontWeight.bold,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            dataCriacao.isNotEmpty ? 'Pedido em $dataCriacao' : 'Aguardando sua escolha',
-                            style: const TextStyle(color: AppColors.outline, fontSize: 12),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nome,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold, 
+                                  color: AppColors.onSurface,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                dataCriacao.isNotEmpty ? 'Pedido em $dataCriacao' : 'Aguardando sua escolha',
+                                style: const TextStyle(color: AppColors.outline, fontSize: 12),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryContainer,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => _aceitar(solicitacaoId),
+                    child: const Text('Aceitar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryContainer,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _abrirChat(solicitacaoId, nome),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                  label: const Text('Conversar'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryContainer,
+                    side: BorderSide(color: AppColors.primaryContainer),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                 ),
-                onPressed: () => _aceitar(solicitacao['id']),
-                child: const Text('Aceitar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               ),
             ],
           ),

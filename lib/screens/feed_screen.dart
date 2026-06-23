@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/feed_item.dart';
-import '../screens/agendamento_screen.dart';
 import '../services/doacao_service.dart';
 import '../services/feed_service.dart';
 import '../services/solicitacao_service.dart';
@@ -24,11 +23,11 @@ class _FeedScreenState extends State<FeedScreen> {
   List<FeedItem> _itens = [];
   List<String> _filtros = ['Todos'];
   String _filtroSelecionado = 'Todos';
+  int? _meuId;
   final _buscaController = TextEditingController();
   final _scrollController = ScrollController();
   int _pagina = 1;
   bool _temMaisPaginas = true;
-  int? _usuarioAtualId;
 
   static const _paddingH = 16.0;
   static const _espacamento = 12.0;
@@ -36,9 +35,15 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   void initState() {
     super.initState();
-    _carregarUsuario();
     _carregarCategorias();
-    _carregarItens(reiniciar: true);
+    _carregarMeuId().then((_) => _carregarItens(reiniciar: true));
+  }
+
+  Future<void> _carregarMeuId() async {
+    try {
+      final user = await UsuarioService.instance.getMe();
+      if (mounted) setState(() => _meuId = user.id);
+    } catch (_) {}
   }
 
   @override
@@ -78,7 +83,11 @@ class _FeedScreenState extends State<FeedScreen> {
       final itens = results[0] as List<FeedItem>;
       final solicitacoes = results[1] as Map<int, int>;
 
-      final itensCruzados = itens.map((item) {
+      final itensCruzados = itens
+          .where((item) =>
+              item.status.toLowerCase() != 'doado' &&
+              (_meuId == null || item.doadorId != _meuId))
+          .map((item) {
         final solId = solicitacoes[item.id];
         return solId != null ? item.copyWith(solicitacaoId: solId) : item;
       }).toList();
@@ -98,127 +107,6 @@ class _FeedScreenState extends State<FeedScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _carregarUsuario() async {
-    try {
-      final usuario = await UsuarioService.instance.getMe();
-      if (mounted) setState(() => _usuarioAtualId = usuario.id);
-    } catch (_) {
-      // sem usuário, continuamos sem ações específicas do proprietário
-    }
-  }
-
-  Future<void> _abrirAgendamento(FeedItem item) async {
-    if (_usuarioAtualId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível abrir o agendamento. Faça login novamente.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AgendamentoScreen(
-          itemId: item.id,
-          usuarioIdAtual: _usuarioAtualId!,
-          doadorId: item.doadorId,
-        ),
-      ),
-    );
-
-    if (mounted) {
-      await _carregarItens(reiniciar: true);
-    }
-  }
-
-  Future<void> _aceitarSolicitacaoEabrirAgendamento(int solicitacaoId, FeedItem item) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await SolicitacaoService.instance.aceitarSolicitacao(solicitacaoId);
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Solicitação aceita! Abrindo agenda...'),
-          backgroundColor: Color(0xFF0D631B),
-        ),
-      );
-      await _carregarItens(reiniciar: true);
-      _abrirAgendamento(item);
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erro ao aceitar solicitação: $e'), backgroundColor: Colors.red),
-      );
-    }
-  }
-
-  Future<void> _abrirAceitarSolicitacao(FeedItem item) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final solicitacoes = await SolicitacaoService.instance.buscarSolicitacoesDoItem(item.id);
-      final pendentes = solicitacoes.where((s) => s['status'] == 'pendente').toList();
-
-      if (pendentes.isEmpty) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Não há solicitações pendentes para este item.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      if (pendentes.length == 1) {
-        await _aceitarSolicitacaoEabrirAgendamento(pendentes.first['id'] as int, item);
-        return;
-      }
-
-      if (!mounted) return;
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Escolha uma solicitação'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: pendentes.length,
-              itemBuilder: (context, index) {
-                final solicitacao = pendentes[index];
-                final solicitante = solicitacao['solicitante'] ?? {};
-                final nome = solicitante['nome'] ?? 'Usuário interessado';
-
-                return ListTile(
-                  title: Text(nome),
-                  subtitle: Text('ID: ${solicitacao['id']}'),
-                  trailing: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _aceitarSolicitacaoEabrirAgendamento(solicitacao['id'] as int, item);
-                    },
-                    child: const Text('Aceitar'),
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Erro ao carregar solicitações: $e'), backgroundColor: Colors.red),
-      );
     }
   }
 
@@ -288,16 +176,12 @@ class _FeedScreenState extends State<FeedScreen> {
                   crossAxisCount: colunas,
                   mainAxisSpacing: _espacamento,
                   crossAxisSpacing: _espacamento,
-                  mainAxisExtent: 410,
+                  // imagem quadrada (cardWidth) + área de conteúdo abaixo
+                  mainAxisExtent: cardWidth + 245,
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (_, index) {
                     final item = _itens[index];
-                    final statusLower = item.status.toLowerCase();
-                    final isOwner = item.doadorId != null && item.doadorId == _usuarioAtualId;
-                    final canAcceptDirect = isOwner && statusLower == 'disponivel';
-                    final canOpenAgendamento = (statusLower == 'reservado' || statusLower == 'agendado') &&
-                        (isOwner || item.solicitacaoId != null);
 
                     return FeedCard(
                       item: item,
@@ -313,8 +197,6 @@ class _FeedScreenState extends State<FeedScreen> {
                           }
                         }
                       },
-                      onAcceptDirect: canAcceptDirect ? () => _abrirAceitarSolicitacao(item) : null,
-                      onOpenAgendamento: canOpenAgendamento ? () => _abrirAgendamento(item) : null,
                     );
                   },
                   childCount: _itens.length,

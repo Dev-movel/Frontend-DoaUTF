@@ -705,8 +705,10 @@ return Scaffold(
                 const SizedBox(height: 16),
                 Text('Interessados: $itemTitle', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
-                ModalInteressadosBottomSheet(
+ModalInteressadosBottomSheet(
                   itemId: itemId,
+                  meuId: _usuario?.id ?? 0,
+                  tituloItem: itemTitle,
                   onSolicitacaoAceita: _carregarDados,
                 ),
               ],
