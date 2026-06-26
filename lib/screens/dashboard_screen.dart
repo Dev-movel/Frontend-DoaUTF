@@ -80,17 +80,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _minhasDoacoes = [];
         _itensRecebidos = 0;
+        _totalItensDoadosContador = 0;
         _meusAgendamentos = [];
         _receivedFotos = {};
       });
 
       final user = await UsuarioService.instance.getMe();
-      final donations = await UsuarioService.instance.getMyDonations(
+      final allDonations = await UsuarioService.instance.getMyDonations(status: null);
+      final filteredDonations = await UsuarioService.instance.getMyDonations(
         status: _mapearStatusParaApi(_statusSelecionado),
       );
       final received = await UsuarioService.instance.getReceivedDonations();
       final agendamentos = await UsuarioService.instance.getMyAgendamentos();
-
       final Map<int, String?> fotoMap = {};
       for (final d in received) {
         fotoMap[d.id] = d.fotoUrl;
@@ -99,13 +100,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _usuario = user;
         _nomeUsuario = user.nome.isNotEmpty ? user.nome : 'Usuário';
-        _minhasDoacoes = donations;
+        _minhasDoacoes = filteredDonations;
         
-        if (_statusSelecionado == 'Todos') {
-          _totalItensDoadosContador = donations.length;
-        }
+        _totalItensDoadosContador = allDonations
+            .where((d) => d.status.toLowerCase() == 'doado')
+            .length;
 
-        _itensRecebidos = received.length;
+        _itensRecebidos = received
+            .where((d) => d.status.toLowerCase() == 'doado')
+            .length;
+
         _meusAgendamentos = agendamentos;
         _receivedFotos = fotoMap;
       });
@@ -199,31 +203,97 @@ return Scaffold(
 
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final cols = 3;
-                      final spacing = constraints.maxWidth > 600 ? 24.0 : 8.0;
-                      final totalSpacing = spacing * (cols - 1);
-                      final cardWidth = (constraints.maxWidth - totalSpacing) / cols;
-
-                      final String notaTexto = _totalAvaliacoes > 0 && _mediaAvaliacoes != null
-                          ? '${_mediaAvaliacoes!.toStringAsFixed(1)}'
-                          : 'N/A';
-
                       final String labelDoados = isMobile ? 'DOADOS' : 'ITENS DOADOS';
                       final String labelRecebidos = isMobile ? 'RECEBIDOS' : 'ITENS RECEBIDOS';
-                      final String labelReputacao = _totalAvaliacoes > 0
-                          ? (isMobile ? 'REPUTAÇÃO' : 'MINHA REPUTAÇÃO ($_totalAvaliacoes)')
-                          : (isMobile ? 'REPUTAÇÃO' : 'MINHA REPUTAÇÃO');
-                      
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildStatCard('$_totalItensDoadosContador', labelDoados, Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth, isMobile),
-                          SizedBox(width: spacing),
-                          _buildStatCard('$_itensRecebidos', labelRecebidos, Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth, isMobile),
-                          SizedBox(width: spacing),
-                          _buildStatCard(notaTexto, labelReputacao, Icons.star, Colors.amber[700]!, Colors.white, cardWidth, isMobile),
-                        ],
-                      );
+
+                      if (_totalAvaliacoes > 0) {
+                        final cols = 3;
+                        final spacing = constraints.maxWidth > 600 ? 24.0 : 8.0;
+                        final totalSpacing = spacing * (cols - 1);
+                        final cardWidth = (constraints.maxWidth - totalSpacing) / cols;
+
+                        final String notaTexto = _mediaAvaliacoes != null 
+                            ? _mediaAvaliacoes!.toStringAsFixed(1) 
+                            : '0.0';
+                            
+                        final String labelReputacao = isMobile 
+                            ? 'REPUTAÇÃO' 
+                            : 'MINHA REPUTAÇÃO ($_totalAvaliacoes)';
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildStatCard('$_totalItensDoadosContador', labelDoados, Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth, isMobile),
+                            SizedBox(width: spacing),
+                            _buildStatCard('$_itensRecebidos', labelRecebidos, Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth, isMobile),
+                            SizedBox(width: spacing),
+                            _buildStatCard(notaTexto, labelReputacao, Icons.star, Colors.amber[700]!, Colors.white, cardWidth, isMobile),
+                          ],
+                        );
+                      }
+                      else {
+                        final spacing = constraints.maxWidth > 600 ? 24.0 : 8.0;
+                        final cardWidth = (constraints.maxWidth - spacing) / 2;
+                        final cardPadding = isMobile ? 12.0 : 18.0;
+
+                        return Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildStatCard('$_totalItensDoadosContador', labelDoados, Icons.volunteer_activism, AppColors.primaryContainer, Colors.white, cardWidth, isMobile),
+                                SizedBox(width: spacing),
+                                _buildStatCard('$_itensRecebidos', labelRecebidos, Icons.inventory_2_outlined, Colors.blue, Colors.white, cardWidth, isMobile),
+                              ],
+                            ),
+                            SizedBox(height: spacing),
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(cardPadding),
+                              decoration: BoxDecoration(
+                                color: Colors.amber[700]!,
+                                borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.star_border_rounded,
+                                    color: Colors.white.withOpacity(0.9),
+                                    size: isMobile ? 36 : 46,
+                                  ),
+                                  SizedBox(width: isMobile ? 12.0 : 16.0),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          isMobile ? 'REPUTAÇÃO' : 'MINHA REPUTAÇÃO',
+                                          style: TextStyle(
+                                            fontSize: isMobile ? 10 : 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white.withOpacity(0.75),
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Ainda não recebeu nenhuma avaliação. Que tal incentivar a solidariedade e realizar uma doação?',
+                                          style: TextStyle(
+                                            fontSize: isMobile ? 12 : 14,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.white,
+                                            height: 1.3,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }
                     }
                   ),
                   const SizedBox(height: 48),
