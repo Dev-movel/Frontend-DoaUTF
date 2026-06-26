@@ -775,10 +775,22 @@ return Scaffold(
                 const SizedBox(height: 16),
                 Text('Interessados: $itemTitle', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
-ModalInteressadosBottomSheet(
+                ModalInteressadosBottomSheet(
                   itemId: itemId,
                   meuId: _usuario?.id ?? 0,
                   tituloItem: itemTitle,
+                  onSolicitacaoAceitaComSucesso: (acceptedItemId) {
+                    _carregarDados();
+                    Future.delayed(const Duration(milliseconds: 600)).then((_) {
+                      _abrirAgendamentoDoReceptor(
+                        acceptedItemId,
+                        _usuario?.id ?? 0,
+                        itemTitle,
+                        null,
+                        souODoador: true,
+                      );
+                    });
+                  },
                   onSolicitacaoAceita: _carregarDados,
                 ),
               ],
