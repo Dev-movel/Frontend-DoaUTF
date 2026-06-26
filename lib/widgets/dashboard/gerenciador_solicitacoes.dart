@@ -6,6 +6,7 @@ class ModalInteressadosBottomSheet extends StatefulWidget {
   final int itemId;
   final int meuId;
   final String tituloItem;
+  final Function(int itemId)? onSolicitacaoAceitaComSucesso;
   final VoidCallback onSolicitacaoAceita;
 
   const ModalInteressadosBottomSheet({
@@ -13,6 +14,7 @@ class ModalInteressadosBottomSheet extends StatefulWidget {
     required this.itemId,
     required this.meuId,
     required this.tituloItem,
+    this.onSolicitacaoAceitaComSucesso,
     required this.onSolicitacaoAceita,
   });
 
@@ -24,6 +26,7 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
   List<dynamic> _interessados = [];
   bool _isLoading = true;
   String? _errorMessage;
+  int? _solicitacaoAceitandoId;
 
   @override
   void initState() {
@@ -53,36 +56,44 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
 
   Future<void> _aceitar(int solicitacaoId) async {
     setState(() {
-      _isLoading = true; 
-      _errorMessage = null;
+      _solicitacaoAceitandoId = solicitacaoId;
     });
+
     try {
       await SolicitacaoService.instance.aceitarSolicitacao(solicitacaoId);
+      
       if (!mounted) return;
 
+      widget.onSolicitacaoAceitaComSucesso?.call(widget.itemId);
       widget.onSolicitacaoAceita();
-      
-      setState(() {
-        _isLoading = false;
-        _interessados = [];
-      });
-
-      Navigator.pop(context); 
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Solicitação aceita! O item foi reservado e o agendamento foi iniciado.'),
+          content: Text('Solicitação aceita com sucesso! ✓'),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
         ),
       );
-    } catch (e) {
+
+      await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) {
-        setState(() {
-          _errorMessage = e.toString();
-          _isLoading = false;
-        });
+        Navigator.pop(context);
       }
-      _carregarInteressados();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Erro ao aceitar: ${e.toString().replaceAll("Exception: ", "")}';
+        _solicitacaoAceitandoId = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_errorMessage!),
+          backgroundColor: Colors.red.shade800,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      await _carregarInteressados();
     }
   }
 
@@ -127,9 +138,7 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 12),
-        
             const Divider(color: AppColors.outlineVariant),
-
             Flexible(
               child: _buildMainContent(),
             ),
@@ -152,10 +161,17 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
     if (_errorMessage != null) {
       return Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Text(
-          _errorMessage!,
-          style: const TextStyle(color: Colors.red),
-          textAlign: TextAlign.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage!,
+              style: TextStyle(color: Colors.red.shade700, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       );
     }
@@ -188,7 +204,8 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
         
         final nome = solicitante['nome'] ?? solicitacao['solicitante_nome'] ?? 'Usuário Interessado';
         final dataCriacao = _formatarData(solicitacao['criado_em'] ?? solicitacao['data_solicitacao']);
-        final solicitacaoId = solicitacao['id'] as int;
+        final solicitacaoId = solicitacao['id'] as int;        
+        final isProcessando = _solicitacaoAceitandoId == solicitacaoId;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -245,14 +262,25 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
                   const SizedBox(width: 8),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryContainer,
+                      backgroundColor: isProcessando 
+                          ? Colors.grey.shade400 
+                          : AppColors.primaryContainer,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    onPressed: () => _aceitar(solicitacaoId),
-                    child: const Text('Aceitar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    onPressed: isProcessando ? null : () => _aceitar(solicitacaoId),
+                    child: isProcessando
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('Aceitar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ],
               ),
@@ -260,12 +288,14 @@ class _ModalInteressadosBottomSheetState extends State<ModalInteressadosBottomSh
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () => _abrirChat(solicitacaoId, nome),
+                  onPressed: isProcessando ? null : () => _abrirChat(solicitacaoId, nome),
                   icon: const Icon(Icons.chat_bubble_outline, size: 16),
                   label: const Text('Conversar'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primaryContainer,
-                    side: BorderSide(color: AppColors.primaryContainer),
+                    foregroundColor: isProcessando ? Colors.grey : AppColors.primaryContainer,
+                    side: BorderSide(
+                      color: isProcessando ? Colors.grey : AppColors.primaryContainer,
+                    ),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
