@@ -3,6 +3,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../auth/services/token_storage.dart';
 import '../config/app_config.dart';
+import '../models/notificacao.dart';
+import 'notificacao_service.dart';
+import 'usuario_service.dart';
 
 class AppNotificacao {
   final int id;
@@ -54,13 +57,23 @@ class NotificationService extends ChangeNotifier {
   // Conversas que o usuário está visualizando agora — não geram notificação
   final Set<int> _chatsAbertos = {};
 
+  // Notificações de sistema vindas do backend (/notificacoes)
+  final List<Notificacao> _sistema = [];
+
+  // Id do usuário logado — usado para navegar a partir de uma notificação
+  int? meuId;
+
   List<AppNotificacao> get lista {
     final naoLidas = _lista.where((n) => !n.lida).toList()
       ..sort((a, b) => b.criadoEm.compareTo(a.criadoEm));
     return List.unmodifiable(naoLidas);
   }
 
-  int get totalNaoLidas => _lista.where((n) => !n.lida).length;
+  /// Notificações de sistema não lidas (interesse, agendamento, etc.).
+  List<Notificacao> get listaSistema => List.unmodifiable(_sistema);
+
+  int get totalNaoLidas =>
+      _lista.where((n) => !n.lida).length + _sistema.length;
 
   Future<Map<String, String>> _headers() async {
     final token = await TokenStorage.instance.getAccessToken();
@@ -71,8 +84,33 @@ class NotificationService extends ChangeNotifier {
 
   void iniciarPolling({Duration intervalo = const Duration(seconds: 20)}) {
     _pollingTimer?.cancel();
+    _carregarMeuId();
     _buscarNaoLidas();
-    _pollingTimer = Timer.periodic(intervalo, (_) => _buscarNaoLidas());
+    _buscarSistema();
+    _pollingTimer = Timer.periodic(intervalo, (_) {
+      _buscarNaoLidas();
+      _buscarSistema();
+    });
+  }
+
+  Future<void> _carregarMeuId() async {
+    if (meuId != null) return;
+    try {
+      final user = await UsuarioService.instance.getMe();
+      meuId = user.id;
+    } catch (_) {}
+  }
+
+  /// Consulta GET /notificacoes (apenas não lidas) e atualiza o badge.
+  Future<void> _buscarSistema() async {
+    final lista =
+        await NotificacaoService.instance.listar(apenasNaoLidas: true);
+    final mudou = lista.length != _sistema.length ||
+        !lista.every((n) => _sistema.any((s) => s.id == n.id));
+    _sistema
+      ..clear()
+      ..addAll(lista);
+    if (mudou) notifyListeners();
   }
 
   void pararPolling() {
@@ -207,7 +245,21 @@ class NotificationService extends ChangeNotifier {
         changed = true;
       }
     }
+    if (_sistema.isNotEmpty) {
+      _sistema.clear();
+      changed = true;
+      await NotificacaoService.instance.marcarTodasLidas();
+    }
     if (changed) notifyListeners();
+  }
+
+  /// Marca uma notificação de sistema como lida (remove do badge/painel).
+  Future<void> marcarSistemaLida(int id) async {
+    final idx = _sistema.indexWhere((n) => n.id == id);
+    if (idx < 0) return;
+    _sistema.removeAt(idx);
+    notifyListeners();
+    await NotificacaoService.instance.marcarLida(id);
   }
 
   Future<void> buscarLista({bool apenasNaoLidas = false}) async {
