@@ -529,9 +529,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               icon: const Icon(Icons.check, color: Colors.green),
                               label: const Text('Manter Post', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
                               onPressed: () async {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Denúncia arquivada. O post continua ativo.')),
-                                );
+                                try {
+                                  // 1. Chama o serviço para remover a denúncia usando o ID do item
+                                  // (Se a sua API pedir o ID da denúncia em vez do ID do item, mude para denuncia['id'])
+                                  await AdminService.instance.arquivarDenunciaItem(denuncia['item_id']);
+
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Denúncia arquivada. O post continua ativo.'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+
+                                  _carregarDados();
+
+                                } catch (e) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Erro ao processar: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               },
                             ),
                             const SizedBox(width: 8),

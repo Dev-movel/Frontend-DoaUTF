@@ -78,26 +78,24 @@ class AdminService {
     }
   }
 
-Future<List<dynamic>> buscarPostsDenunciados() async {
+  Future<List<dynamic>> buscarPostsDenunciados() async {
     try {
-      final token = await TokenStorage.instance.getAccessToken();
+      final options = await _getAuthOptions();
 
       final response = await _dio.get(
         '/usuarios/denuncias-posts',
-        options: Options(
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        ),
+        options: options,
       );
       
       return response.data; 
+    } on DioException catch (e) {
+      debugPrint('❌ [GET /usuarios/denuncias-posts] Status: ${e.response?.statusCode}');
+      throw Exception(_extractError(e) ?? 'Não foi possível carregar as denúncias de posts.');
     } catch (e) {
-      print('Erro ao buscar denúncias de posts: $e');
-      throw Exception('Não foi possível carregar as denúncias de posts.');
+      debugPrint('❌ Erro inesperado ao buscar denúncias de posts: $e');
+      throw Exception('Erro inesperado ao carregar denúncias.');
     }
   }
-
 Future<void> removerItemAdmin(int itemId) async {
   try {
     String? token = await TokenStorage.instance.getAccessToken(); 
@@ -131,6 +129,24 @@ Future<void> removerItemAdmin(int itemId) async {
     } catch (e) {
       debugPrint('❌ Erro inesperado em buscarDoacoesAtivas: $e');
       return [];
+    }
+  }
+
+  Future<void> arquivarDenunciaItem(int itemId) async {
+    try {
+      final options = await _getAuthOptions();
+      await _dio.delete(
+        '/itens/admin/denuncias/item/$itemId',
+        options: options,
+      );
+      
+      debugPrint(' [DELETE /itens/admin/denuncias/item/$itemId] Denúncia arquivada.');
+    } on DioException catch (e) {
+      debugPrint(' Erro ao arquivar denúncia: ${e.response?.data}');
+      throw Exception(_extractError(e) ?? 'Falha ao remover a denúncia. Status: ${e.response?.statusCode}');
+    } catch (e) {
+      debugPrint(' Erro inesperado em arquivarDenunciaItem: $e');
+      throw Exception('Erro de conexão ao arquivar denúncia: $e');
     }
   }
 }
