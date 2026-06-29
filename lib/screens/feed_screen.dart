@@ -3,7 +3,6 @@ import '../models/feed_item.dart';
 import '../services/doacao_service.dart';
 import '../services/feed_service.dart';
 import '../services/solicitacao_service.dart';
-import '../services/usuario_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/main_app_bar.dart';
 import '../widgets/feed/feed_card.dart';
@@ -23,7 +22,6 @@ class _FeedScreenState extends State<FeedScreen> {
   List<FeedItem> _itens = [];
   List<String> _filtros = ['Todos'];
   String _filtroSelecionado = 'Todos';
-  int? _meuId;
   final _buscaController = TextEditingController();
   final _scrollController = ScrollController();
   int _pagina = 1;
@@ -36,14 +34,7 @@ class _FeedScreenState extends State<FeedScreen> {
   void initState() {
     super.initState();
     _carregarCategorias();
-    _carregarMeuId().then((_) => _carregarItens(reiniciar: true));
-  }
-
-  Future<void> _carregarMeuId() async {
-    try {
-      final user = await UsuarioService.instance.getMe();
-      if (mounted) setState(() => _meuId = user.id);
-    } catch (_) {}
+    _carregarItens(reiniciar: true);
   }
 
   @override
@@ -83,11 +74,9 @@ class _FeedScreenState extends State<FeedScreen> {
       final itens = results[0] as List<FeedItem>;
       final solicitacoes = results[1] as Map<int, int>;
 
-      final itensCruzados = itens
-          .where((item) =>
-              item.status.toLowerCase() != 'doado' &&
-              (_meuId == null || item.doadorId != _meuId))
-          .map((item) {
+      // O backend (GET /itens) já exclui itens doados e os do próprio usuário.
+      // Aqui só cruzamos com as solicitações para marcar o solicitacao_id de cada item.
+      final itensCruzados = itens.map((item) {
         final solId = solicitacoes[item.id];
         return solId != null ? item.copyWith(solicitacaoId: solId) : item;
       }).toList();
