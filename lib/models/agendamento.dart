@@ -77,20 +77,20 @@ class Agendamento {
       doadorId:            parseInt(json['doador_id']),
       receptorId:          parseInt(json['receptor_id']),
       
-      dataHora:            json['data_hora'] != null 
-                             ? DateTime.tryParse(json['data_hora'].toString()) 
+      dataHora:            json['data_hora'] != null
+                             ? DateTime.tryParse(json['data_hora'].toString())?.toLocal()
                              : null,
-                             
+
       confirmacaoDoador:   json['confirmacao_doador'] == true || json['confirmacao_doador'] == 'true',
       confirmacaoReceptor: json['confirmacao_receptor'] == true || json['confirmacao_receptor'] == 'true',
-      
+
       status:              AgendamentoStatusX.fromString(json['status']?.toString()),
-      
-      createdAt:           json['created_at'] != null 
-                             ? DateTime.tryParse(json['created_at'].toString()) 
+
+      createdAt:           json['created_at'] != null
+                             ? DateTime.tryParse(json['created_at'].toString())?.toLocal()
                              : null,
-      updatedAt:           json['updated_at'] != null 
-                             ? DateTime.tryParse(json['updated_at'].toString()) 
+      updatedAt:           json['updated_at'] != null
+                             ? DateTime.tryParse(json['updated_at'].toString())?.toLocal()
                              : null,
     );
   }
