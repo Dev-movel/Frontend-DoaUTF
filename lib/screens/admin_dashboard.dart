@@ -14,14 +14,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   late TabController _tabController;
   bool _isLoading = true;
 
-  // Controlador e string para a barra de pesquisa de usuários
   final TextEditingController _searchController = TextEditingController();
   String _filtroNome = '';
 
-  // Futures que vão buscar os dados reais da API
   late Future<List<dynamic>> _usuariosFuture;
   late Future<List<dynamic>> _doacoesAtivasFuture;
-  // Future dedicado para buscar as denúncias de posts do backend
   late Future<List<dynamic>> _postsDenunciadosFuture;
 
   @override
@@ -31,7 +28,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     _validarAcessoAdmin();
     _carregarDados();
 
-    // Ouvinte para atualizar a tela conforme o admin digita na pesquisa
     _searchController.addListener(() {
       setState(() {
         _filtroNome = _searchController.text.toLowerCase();
@@ -65,6 +61,99 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         _isLoading = false;
       });
     }
+  }
+
+  void _mostrarDialogoCriarCategoria(BuildContext context) {
+    final formKey = GlobalKey<FormState>();
+    final nomeController = TextEditingController();
+    bool isSalvando = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: !isSalvando, 
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text(
+                'Criar Nova Categoria',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: nomeController,
+                  enabled: !isSalvando,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome da Categoria',
+                    hintText: 'Ex: Eletrônicos, Brinquedos',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.category_outlined),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Por favor, insira um nome.';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSalvando ? null : () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2D7A1F),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: isSalvando
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+
+                          setDialogState(() => isSalvando = true);
+
+                          try {
+                            await AdminService.instance.criarCategoria(nomeController.text.trim());
+
+                            if (!context.mounted) return;
+                            Navigator.pop(context); // Fecha o Modal
+                            
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('✅ Categoria criada com sucesso!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erro ao criar categoria: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          } finally {
+                            setDialogState(() => isSalvando = false);
+                          }
+                        },
+                  child: isSalvando
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Salvar', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -174,6 +263,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             leading: const Icon(Icons.settings),
             title: const Text('Configurações'),
             onTap: () {},
+          ),
+          ListTile(
+            leading: const Icon(Icons.post_add_rounded, color: Color(0xFF2D7A1F)),
+            title: const Text('Gerenciar Categorias'),
+            onTap: () {
+              Navigator.pop(context);
+              _mostrarDialogoCriarCategoria(context); 
+            },
           ),
           const Divider(),
           ListTile(
