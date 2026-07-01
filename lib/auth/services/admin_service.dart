@@ -96,6 +96,26 @@ class AdminService {
       throw Exception('Erro inesperado ao carregar denúncias.');
     }
   }
+
+  Future<void> criarCategoria(String nome) async {
+    try {
+      final token = await TokenStorage.instance.getAccessToken(); 
+
+      await _dio.post(
+        '/categorias',
+        data: {'nome': nome},
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+    } on DioException catch (e) {
+      final mensagemErro = e.response?.data?['message'] ?? 'Erro ao salvar nova categoria.';
+      throw Exception(mensagemErro);
+    }
+  }
+
 Future<void> removerItemAdmin(int itemId) async {
   try {
     String? token = await TokenStorage.instance.getAccessToken(); 
