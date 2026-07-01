@@ -18,6 +18,7 @@ import 'screens/tela_mapa.dart';
 import 'screens/notificacoes_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/conversas_screen.dart';
+import 'screens/premiacoes_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -64,6 +65,7 @@ class MyApp extends StatelessWidget {
         '/feed': (_) => const FeedScreen(),
         '/mapa': (_) => TelaDoMapa(),
         '/conversas': (_) => const ConversasScreen(),
+        '/premiacoes': (_) => const PremiacoesScreen(),
         '/notificacoes': (_) => const NotificacoesScreen(),
       },
 

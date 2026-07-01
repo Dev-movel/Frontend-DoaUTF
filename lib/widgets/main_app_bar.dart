@@ -408,18 +408,19 @@ class _MainAppBarState extends State<MainAppBar> {
             PopupMenuButton<String>(
               icon: const Icon(Icons.menu, color: AppColors.onSurface),
               onSelected: (route) {
-                if (route == '/doar' || route == '/conversas') {
+                if (route == '/doar' || route == '/conversas' || route == '/premiacoes') {
                   Navigator.pushNamed(context, route);
                 } else {
                   Navigator.pushReplacementNamed(context, route);
                 }
               },
               itemBuilder: (_) => [
-                PopupMenuItem(value: '/feed',       child: Text('Feed',       style: _navStyle('/feed'))),
-                PopupMenuItem(value: '/doar',       child: Text('Doar',       style: _navStyle('/doar'))),
-                PopupMenuItem(value: '/conversas',  child: Text('Chat',       style: _navStyle('/conversas'))),
-                PopupMenuItem(value: '/dashboard',  child: Text('Dashboard',  style: _navStyle('/dashboard'))),
-                PopupMenuItem(value: '/profile',    child: Text('Perfil',     style: _navStyle('/profile'))),
+                PopupMenuItem(value: '/feed',        child: Text('Feed',        style: _navStyle('/feed'))),
+                PopupMenuItem(value: '/doar',        child: Text('Doar',        style: _navStyle('/doar'))),
+                PopupMenuItem(value: '/conversas',   child: Text('Chat',        style: _navStyle('/conversas'))),
+                PopupMenuItem(value: '/premiacoes',  child: Text('Premiações',  style: _navStyle('/premiacoes'))),
+                PopupMenuItem(value: '/dashboard',   child: Text('Dashboard',   style: _navStyle('/dashboard'))),
+                PopupMenuItem(value: '/profile',     child: Text('Perfil',      style: _navStyle('/profile'))),
               ],
             )
           else
@@ -449,6 +450,10 @@ class _MainAppBarState extends State<MainAppBar> {
                   TextButton(
                     onPressed: () => Navigator.pushNamed(context, '/conversas'),
                     child: Text('Chat', style: _navStyle('/conversas')),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pushNamed(context, '/premiacoes'),
+                    child: Text('Prêmios', style: _navStyle('/premiacoes')),
                   ),
                   TextButton(
                     onPressed: () => Navigator.pushReplacementNamed(context, '/dashboard'),
