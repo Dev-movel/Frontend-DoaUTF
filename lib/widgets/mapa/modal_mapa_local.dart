@@ -118,7 +118,9 @@ class _MapaComDestaque extends StatelessWidget {
       builder: (context, constraints) {
         const double svgW = 2200;
         const double svgH = 1700;
-        final double escala = (constraints.maxWidth / svgW).clamp(0.1, 1.0);
+        // Escala pelo lado menor do SVG (altura) para que, após rotação de 90°,
+        // o mapa preencha a largura disponível no modal.
+        final double escala = (constraints.maxWidth / svgH).clamp(0.1, 1.0);
         final double largura = svgW * escala;
         final double altura = svgH * escala;
         final Offset posEscalada = Offset(
@@ -130,26 +132,29 @@ class _MapaComDestaque extends StatelessWidget {
           maxScale: 5.0,
           minScale: 1.0,
           child: Center(
-            child: SizedBox(
-              width: largura,
-              height: altura,
-              child: Stack(
-                children: [
-                  SvgPicture.asset(
-                    'assets/images/file.svg',
-                    width: largura,
-                    height: altura,
-                    fit: BoxFit.contain,
-                  ),
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _PintorPulso(
-                        posicao: posEscalada,
-                        animacao: pulseAnimation,
+            child: RotatedBox(
+              quarterTurns: 1,
+              child: SizedBox(
+                width: largura,
+                height: altura,
+                child: Stack(
+                  children: [
+                    SvgPicture.asset(
+                      'assets/images/file.svg',
+                      width: largura,
+                      height: altura,
+                      fit: BoxFit.contain,
+                    ),
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _PintorPulso(
+                          posicao: posEscalada,
+                          animacao: pulseAnimation,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
