@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/usuario.dart';
 import '../models/doacao.dart';
+import '../models/resgate.dart';
 import '../services/usuario_service.dart';
+import '../services/premios_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 import '../widgets/change_password_modal.dart';
 import '../widgets/donation_card.dart';
 import '../widgets/main_app_bar.dart';
@@ -20,6 +23,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   Usuario? _usuario;
   List<Doacao> _doacoes = [];
+  List<Resgate> _resgates = [];
+  int _saldo = 0;
 
   final _nomeController = TextEditingController();
   final _whatsappController = TextEditingController();
@@ -45,6 +50,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         debugPrint('Sem doações ou erro ao buscar: $e');
         _doacoes = [];
       }
+
+      try {
+        final resultados = await Future.wait([
+          PremiosService.instance.buscarSaldo(),
+          PremiosService.instance.buscarResgates(),
+        ]);
+        _saldo = resultados[0] as int;
+        _resgates = resultados[1] as List<Resgate>;
+      } catch (_) {}
 
       _nomeController.text = _usuario!.nome;
       _whatsappController.text = _usuario!.whatsapp ?? '';
@@ -271,6 +285,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ],
                       ),
+                    const SizedBox(height: 40),
+
+                    // ── Pontos e histórico de resgates ──────────────────────
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Pontos e Resgates',
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        TextButton.icon(
+                          onPressed: () => Navigator.pushNamed(context, '/premiacoes'),
+                          icon: const Icon(Icons.emoji_events_rounded, size: 16, color: AppColors.primary),
+                          label: Text('Ver prêmios',
+                              style: AppTextStyles.body.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: EdgeInsets.all(isMobile ? 16 : 24),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.outlineVariant.withOpacity(0.5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Saldo em destaque
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.stars_rounded, color: AppColors.primary, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text('$_saldo pontos',
+                                        style: AppTextStyles.input.copyWith(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 18)),
+                                  ],
+                                ),
+                              ),
+                              const Spacer(),
+                              Text('disponíveis',
+                                  style: AppTextStyles.label.copyWith(color: AppColors.onSurfaceVariant)),
+                            ],
+                          ),
+                          if (_resgates.isEmpty) ...[
+                            const SizedBox(height: 20),
+                            Center(
+                              child: Text('Nenhum resgate realizado ainda.',
+                                  style: AppTextStyles.body.copyWith(color: AppColors.onSurfaceVariant)),
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 16),
+                            const Divider(),
+                            const SizedBox(height: 8),
+                            Text('Histórico de resgates',
+                                style: AppTextStyles.label.copyWith(
+                                    fontWeight: FontWeight.w700, color: AppColors.onSurfaceVariant)),
+                            const SizedBox(height: 8),
+                            ..._resgates.map((r) => _ItemResgate(resgate: r)),
+                          ],
+                        ],
+                      ),
+                    ),
+
                     const SizedBox(height: 60),
                   ],
                 ),
@@ -279,6 +366,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildFormSection(String title, List<Widget> fields, {bool isMobile = false}) {
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -294,6 +382,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(children: fields),
         ),
       ],
+    );
+  }
+}
+
+// ── Item de histórico de resgate ──────────────────────────────────────────
+
+class _ItemResgate extends StatelessWidget {
+  final Resgate resgate;
+  const _ItemResgate({required this.resgate});
+
+  @override
+  Widget build(BuildContext context) {
+    final data = resgate.criadoEm.toLocal();
+    final dataStr =
+        '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.emoji_events_outlined, size: 18, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(resgate.premioNome,
+                    style: AppTextStyles.input.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
+                Text('$dataStr · ${resgate.pontosGastos} pts · Código: ${resgate.codigo}',
+                    style: AppTextStyles.label.copyWith(color: AppColors.onSurfaceVariant, fontSize: 11)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: resgate.isPendente
+                  ? Colors.orange.withOpacity(0.12)
+                  : Colors.green.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              resgate.isPendente ? 'Pendente' : 'Retirado',
+              style: AppTextStyles.label.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: resgate.isPendente ? Colors.orange.shade700 : Colors.green.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
